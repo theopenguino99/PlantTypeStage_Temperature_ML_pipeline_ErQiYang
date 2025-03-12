@@ -3,7 +3,7 @@
 # Paths
 paths:
   data_dir: "data/"
-  raw_data: "data/raw/score.db"
+  raw_data: "data/agri.db"
   processed_data: "data/processed/processed_data.csv"
   features_data: "data/processed/features_data.csv"
   models_dir: "models/"

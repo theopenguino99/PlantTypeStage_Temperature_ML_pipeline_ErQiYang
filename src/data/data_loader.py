@@ -7,7 +7,7 @@ import pandas as pd
 import sqlite3
 from pathlib import Path
 from loguru import logger
-import load_preprocessing_config
+# import load_preprocessing_config
 
 
 class DataLoader:
@@ -70,7 +70,11 @@ class DataLoader:
             pandas.DataFrame: Loaded data
         """
         conn = sqlite3.connect(db_path)
-        table_name = Path(db_path).stem  # Use the file name (without extension) as the table name
+        # Get the first table name from the SQLite database
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        table_name = cursor.fetchone()[0]
+        cursor.close()
         query = f"SELECT * FROM {table_name}"
         df = pd.read_sql_query(query, conn)
         conn.close()
@@ -104,6 +108,6 @@ class DataLoader:
         
         logger.info(f"Data saved successfully to {filepath}")
 
-# # To test module
-# x = DataLoader({'paths': {'raw_data': 'data/raw/score.db'}})
-# print(x.load_data().head())
+# To test module
+x = DataLoader({'paths': {'raw_data': 'data/agri.db'}})
+print(x.load_data().head())
