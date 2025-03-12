@@ -1,0 +1,119 @@
+# Data preprocessing configuration
+
+# Columns information
+columns:
+  categorical:
+    - direct_admission
+    - CCA
+    - learning_style
+    - gender
+    - tuition
+    - mode_of_transport
+    - bag_color
+  
+  numerical:
+    - number_of_siblings
+    - final_test
+    - n_male
+    - n_female
+    - age
+    - hours_per_week
+    - attendance_rate
+  
+  datetime:
+    - sleep_time
+    - wake_time
+  
+  drop_columns:
+    - index
+    - student_id
+    - bag_color  # As mentioned, can be ignored for duplicate detection
+
+# Data cleaning settings
+cleaning:
+  handle_duplicates:
+    enabled: true
+    ignore_columns:
+      - index
+      - bag_color
+    keep: first
+  
+  handle_missing_values:
+    numerical:
+      strategy: median  # Options: mean, median, mode, constant
+      constant_value: 0  # Only used if strategy is constant
+    
+    categorical:
+      strategy: mode  # Options: mode, constant
+      constant_value: "unknown"  # Only used if strategy is constant
+    
+    datetime:
+      strategy: mode  # Options: mode, constant
+      constant_value: null  # Only used if strategy is constant
+  
+  handle_outliers:
+    method: iqr  # Options: iqr, zscore, none
+    iqr_multiplier: 1.5
+    zscore_threshold: 3.0
+    columns:
+      - age
+      - hours_per_week
+      - attendance_rate
+
+# Feature preprocessing
+preprocessing:
+  categorical_encoding:
+    method: one-hot  # Options: one-hot, label, target, frequency
+    handle_unknown: ignore
+    
+  numerical_scaling:
+    method: standard  # Options: standard, minmax, robust, none
+    
+  datetime_features:
+    extract_hour: true
+    extract_minute: true
+    extract_time_difference: true  # For sleep_time and wake_time
+
+# Feature engineering
+feature_engineering:
+  create_sleep_duration:
+    enabled: true
+    from_columns:
+      - sleep_time
+      - wake_time
+    
+  create_class_size:
+    enabled: true
+    from_columns:
+      - n_male
+      - n_female
+    
+  create_gender_ratio:
+    enabled: true
+    from_columns:
+      - n_male
+      - n_female
+  
+  create_study_efficiency:
+    enabled: true
+    from_columns:
+      - hours_per_week
+      - attendance_rate
+  
+  standardize_categorical:
+    enabled: true
+    columns:
+      tuition:
+        mapping:
+          "Yes": "Yes"
+          "Y": "Yes"
+          "No": "No"
+          "N": "No"
+      CCA:
+        to_lowercase: true
+
+# Feature selection
+feature_selection:
+  method: None  # Options: variance, correlation, importance, none
+  variance_threshold: 0.01  # Only used if method is variance
+  correlation_threshold: 0.8  # Only used if method is correlation
