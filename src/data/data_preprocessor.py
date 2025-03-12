@@ -12,20 +12,20 @@ from sklearn.model_selection import train_test_split
 from category_encoders import OneHotEncoder, TargetEncoder
 from datetime import datetime
 from loguru import logger
-import load_preprocessing_config
+from config_loader import load_config, load_preprocessing_config
 
 class DataPreprocessor:
     """Class to preprocess data for model training."""
     
-    def __init__(self, config):
+    def __init__(self):
         """
-        Initialize the DataPreprocessor.
+        Initialize the DataCleaner.
         
         Args:
             config (dict): Configuration dictionary
         """
-        self.config = config
-        self.preprocessing_config = load_preprocessing_config(self.config) # ERROR HERERERE ?????
+        self.config = load_config()
+        self.preprocessing_config = load_preprocessing_config()
         self.encoders = {}
         self.scalers = {}
     
@@ -241,16 +241,13 @@ class DataPreprocessor:
         return X_train, X_val, X_test, y_train, y_val, y_test
 
 # To test module
-if __name__ == "__main__":
-    from data_loader import DataLoader
-    from data_cleaner import DataCleaner
-    config_path = os.path.join(Path(__file__).resolve().parents[2], 'config/config.yaml')
-    with open(config_path, 'r') as file:
-        config = yaml.safe_load(file)
-    data_loader = DataLoader(config)
-    data = data_loader.load_data()
-    data_cleaner = DataCleaner(config)
-    cleaned_data = data_cleaner.clean_data(data)
-    preprocessor = DataPreprocessor(config)
-    preprocessed_data = preprocessor.preprocess(cleaned_data)
-    preprocessed_data.head()
+# if __name__ == "__main__":
+#     from data_loader import DataLoader
+#     from data_cleaner import DataCleaner
+#     data_loader = DataLoader()
+#     data = data_loader.load_data()
+#     data_cleaner = DataCleaner()
+#     cleaned_data = data_cleaner.clean_data(data)
+#     preprocessor = DataPreprocessor()
+#     preprocessed_data = preprocessor.preprocess(cleaned_data)
+#     preprocessed_data.head()

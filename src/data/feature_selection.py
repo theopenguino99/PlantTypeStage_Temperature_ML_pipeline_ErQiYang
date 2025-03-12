@@ -10,21 +10,21 @@ import numpy as np
 from sklearn.feature_selection import VarianceThreshold, SelectKBest, f_regression
 from sklearn.model_selection import train_test_split
 from loguru import logger
-import load_preprocessing_config
+from config_loader import *
 
 class FeatureSelector:
     """Class to select features for model training."""
     
-    def __init__(self, config):
+    def __init__(self):
         """
         Initialize the FeatureSelector.
         
         Args:
             config (dict): Configuration dictionary
         """
-        self.config = config
+        self.config = load_config()
         self.selected_features = None
-        self.preprocessing_config = load_preprocessing_config(self.config)
+        self.preprocessing_config = load_preprocessing_config()
     
     
     def select_features(self, df):
@@ -166,16 +166,10 @@ class FeatureSelector:
         
         return X_train, X_val, X_test, y_train, y_val, y_test
 
-# Test module
-if __name__ == '__main__':
-
-    from data_loader import DataLoader
-    from data_cleaner import DataCleaner
-    # Load configuration
-    config_path = os.path.join(Path(__file__).resolve().parents[2], 'config/config.yaml')
-    with open(config_path, 'r') as file:
-        config = yaml.safe_load(file)
-    
-    # Load data
-    data_loader = DataLoader(config)
-    data = data_loader.load_data()
+# # Test module
+# if __name__ == '__main__':
+#     from data_loader import DataLoader
+#     from data_cleaner import DataCleaner
+#     # Load data
+#     data_loader = DataLoader()
+#     data = data_loader.load_data()

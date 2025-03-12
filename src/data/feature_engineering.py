@@ -5,20 +5,20 @@ Module for feature engineering.
 import pandas as pd
 import numpy as np
 from loguru import logger
-import load_preprocessing_config
+from config_loader import *
 
 class FeatureEngineer:
     """Class to engineer new features from existing data."""
     
-    def __init__(self, config):
+    def __init__(self):
         """
         Initialize the FeatureEngineer.
         
         Args:
             config (dict): Configuration dictionary
         """
-        self.config = config
-        self.preprocessing_config = load_preprocessing_config(self.config) # ERROR HERERERE ?????
+        self.config = load_config()
+        self.preprocessing_config = load_preprocessing_config()
     
     def engineer_features(self, df):
         """
@@ -190,14 +190,8 @@ class FeatureEngineer:
 if __name__ == "__main__":
     from data_loader import DataLoader
     from data_cleaner import DataCleaner
-    import os
-    import yaml
-    from pathlib import Path
-    config_path = os.path.join(Path(__file__).resolve().parents[2], 'config/config.yaml')
-    with open(config_path, 'r') as file:
-        config = yaml.safe_load(file)
-    data_loader = DataLoader(config)
+    data_loader = DataLoader()
     df = data_loader.load_data()
-    data_engineer = FeatureEngineer(config)
+    data_engineer = FeatureEngineer()
     df_features = data_engineer.engineer_features(df)
     print(df_features.head())

@@ -7,21 +7,22 @@ import pandas as pd
 import sqlite3
 from pathlib import Path
 from loguru import logger
-# import load_preprocessing_config
+from config_loader import *
 
 
 class DataLoader:
     """Data loader class to load data from various sources."""
     
-    def __init__(self, config):
+    def __init__(self):
         """
         Initialize the DataLoader.
         
         Args:
             config (dict): Configuration dictionary
         """
-        self.config = config
-        self.raw_data_path = os.path.join(Path(__file__).resolve().parents[2], config['paths']['raw_data'])
+        self.config = load_config()
+        self.preprocessing_config = load_preprocessing_config()
+        self.raw_data_path = load_raw_data()
         
     def load_data(self):
         """
@@ -108,6 +109,6 @@ class DataLoader:
         
         logger.info(f"Data saved successfully to {filepath}")
 
-# To test module
-x = DataLoader({'paths': {'raw_data': 'data/agri.db'}})
-print(x.load_data().head())
+# # To test module
+# x = DataLoader()
+# print(x.load_data().head())

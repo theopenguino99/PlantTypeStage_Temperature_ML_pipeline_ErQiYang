@@ -7,28 +7,21 @@ from data_loader import DataLoader
 import pandas as pd
 import numpy as np
 from loguru import logger
-import load_preprocessing_config
+from config_loader import load_config, load_preprocessing_config
 
 
 class DataCleaner:
     """Class to clean and preprocess data."""
     
-    def __init__(self, config):
+    def __init__(self):
         """
         Initialize the DataCleaner.
         
         Args:
             config (dict): Configuration dictionary
         """
-        self.config = config
-        self.preprocessing_config = self._load_preprocessing_config()
-        
-    def _load_preprocessing_config(self):
-        """Load preprocessing configuration."""
-        import yaml
-        dir = os.path.join(Path(__file__).resolve().parents[2], self.config['pipeline']['preprocessing_config'])
-        with open(dir, 'r') as file:
-            return yaml.safe_load(file)
+        self.config = load_config()
+        self.preprocessing_config = load_preprocessing_config()
         
     def clean_data(self, df):
         """
@@ -240,8 +233,8 @@ class DataCleaner:
         
         return df
     
-# To test module
-df = DataLoader({'paths': {'raw_data': 'data/raw/score.db'}}).load_data()
-cleaner = DataCleaner({'pipeline': {'preprocessing_config': 'config/preprocessing_config.yaml'}})
-cleaned_data = cleaner.clean_data(df)
-print(cleaned_data.head())
+# # To test module
+# df = DataLoader().load_data()
+# cleaner = DataCleaner()
+# cleaned_data = cleaner.clean_data(df)
+# cleaned_data.head()
