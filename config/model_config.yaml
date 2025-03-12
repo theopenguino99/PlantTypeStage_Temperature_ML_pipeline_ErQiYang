@@ -102,8 +102,8 @@ models:
         num_leaves: [15, 31, 63]
         feature_fraction: [0.7, 0.8, 0.9]
 
-# Model evaluation metrics
-evaluation:
+# Model evaluation metrics for regression problem
+evaluation_regression:
   metrics:
     - r2
     - mae
@@ -111,3 +111,13 @@ evaluation:
     - rmse
   primary_metric: rmse  # Metric used for model selection
   lower_is_better: true  # For primary metric
+
+# Model evaluation metrics for classification problem
+evaluation_classification:
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1
+  primary_metric: accuracy  # Metric used for model selection
+  lower_is_better: false  # For primary metric

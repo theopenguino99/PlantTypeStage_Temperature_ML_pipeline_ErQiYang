@@ -15,6 +15,7 @@ import joblib
 import os
 import logging
 from collections import Counter
+from model_config_loader import load_model_config
 
 class PlantTypeStageClassifier:
     """Base class for plant type-stage classification models in the agricultural pipeline."""

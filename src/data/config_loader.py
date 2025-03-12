@@ -2,11 +2,13 @@ import yaml
 from pathlib import Path
 
 CONFIG_PATH = Path(__file__).resolve().parents[2] / "config/config.yaml"
+PREPROCESSING_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config/preprocessing_config.yaml"
 
 def load_config():
     """Load the main configuration file (config.yaml)."""
     with open(CONFIG_PATH, "r") as file:
         return yaml.safe_load(file)
+    
 
 def load_preprocessing_config():
     """Load the preprocessing configuration from config.yaml."""
