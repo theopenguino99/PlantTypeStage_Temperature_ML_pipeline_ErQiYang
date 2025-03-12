@@ -1,224 +1,345 @@
-"""
-Module for training machine learning models.
-"""
-
+import numpy as np
+import pandas as pd
+import logging
 import os
 import joblib
-import pandas as pd
-import numpy as np
-import yaml
-from loguru import logger
-from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-import xgboost as xgb
-import lightgbm as lgb
-from sklearn.model_selection import GridSearchCV, KFold
-import optuna
+from sklearn.model_selection import train_test_split, cross_val_score
+from datetime import datetime
+from .model_factory import ModelFactory
+from .model_evaluator import ModelEvaluator
 
 class ModelTrainer:
-    """Class to train machine learning models."""
+    """
+    Trains machine learning models for both temperature prediction and plant type-stage classification.
+    """
     
     def __init__(self, config):
         """
-        Initialize the ModelTrainer.
+        Initialize the model trainer with configuration.
         
         Args:
             config (dict): Configuration dictionary
         """
         self.config = config
-        self.model_config = self._load_model_config()
-        self.models = {}
-        self.best_params = {}
+        self.pipeline_config = config.get('pipeline', {})
+        self.data_config = config.get('data', {})
+        self.models_dir = config.get('paths', {}).get('models_dir', 'models/')
+        self.use_cross_validation = self.pipeline_config.get('use_cross_validation', False)
+        self.n_folds = self.pipeline_config.get('n_folds', 5)
+        self.model_factory = ModelFactory(config.get('model_config', {}))
+        self.model_evaluator = ModelEvaluator(config)
+        self.logger = logging.getLogger(__name__)
         
-    def _load_model_config(self):
-        """Load model configuration."""
-        with open(self.config['pipeline']['model_config'], 'r') as file:
-            return yaml.safe_load(file)
-    
-    def train_models(self, X_train, y_train, X_val, y_val):
+    def prepare_data(self, features_data, target_column):
         """
-        Train multiple models specified in the configuration.
+        Prepare the data for training and testing.
         
         Args:
-            X_train (pandas.DataFrame): Training features
-            y_train (pandas.Series): Training target
-            X_val (pandas.DataFrame): Validation features
-            y_val (pandas.Series): Validation target
+            features_data (DataFrame): DataFrame with features
+            target_column (str): Name of the target column
             
         Returns:
-            dict: Dictionary of trained models
+            Tuple containing training and testing data
         """
-        logger.info("Starting model training")
+        # Extract features and target
+        X = features_data.drop(columns=[target_column])
+        y = features_data[target_column]
         
-        # Initialize dictionary to store trained models
-        trained_models = {}
+        # Split data into training and testing sets
+        test_size = self.data_config.get('test_size', 0.2)
+        random_state = self.data_config.get('random_state', 42)
         
-        # Get list of models to train from config
-        models_to_train = {k: v for k, v in self.model_config['models'].items() if v['enabled']}
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, random_state=random_state
+        )
         
-        # Train each model
-        for model_name, model_config in models_to_train.items():
-            logger.info(f"Training {model_name}")
-            
-            # Initialize model with default parameters
-            model = self._initialize_model(model_name, model_config['params'])
-            
-            # Check if hyperparameter tuning is enabled
-            if model_config['hyperparameter_tuning']['enabled']:
-                logger.info(f"Performing hyperparameter tuning for {model_name}")
-                model = self._tune_hyperparameters(
-                    model_name, model, model_config['hyperparameter_tuning']['param_grid'], 
-                    X_train, y_train, X_val, y_val
-                )
-            else:
-                # Fit model with default parameters
-                model.fit(X_train, y_train)
-            
-            # Store trained model
-            trained_models[model_name] = model
-            self.models[model_name] = model
-            
-            # Save model to disk
-            if self.config['experiment']['save_models']:
-                self._save_model(model, model_name)
-        
-        logger.info(f"Model training completed. Trained {len(trained_models)} models")
-        return trained_models
-    
-    def _initialize_model(self, model_name, params):
-        """Initialize a model with given parameters."""
-        # Get random state from common settings
-        random_state = self.model_config['common']['random_state']
-        n_jobs = self.model_config['common']['n_jobs']
-        
-        # Add random_state to params if model supports it
-        if model_name not in ['linear_regression']:
-            params['random_state'] = random_state
-        
-        # Add n_jobs to params if model supports it
-        if model_name in ['random_forest', 'xgboost', 'lightgbm']:
-            params['n_jobs'] = n_jobs
-        
-        # Initialize model based on name
-        if model_name == 'linear_regression':
-            return LinearRegression(**params)
-            
-        elif model_name == 'ridge_regression':
-            return Ridge(**params)
-            
-        elif model_name == 'lasso_regression':
-            return Lasso(**params)
-            
-        elif model_name == 'elastic_net':
-            return ElasticNet(**params)
-            
-        elif model_name == 'random_forest':
-            return RandomForestRegressor(**params)
-            
-        elif model_name == 'gradient_boosting':
-            return GradientBoostingRegressor(**params)
-            
-        elif model_name == 'xgboost':
-            return xgb.XGBRegressor(**params)
-            
-        elif model_name == 'lightgbm':
-            return lgb.LGBMRegressor(**params)
-            
-        else:
-            raise ValueError(f"Unsupported model: {model_name}")
-    
-    def _tune_hyperparameters(self, model_name, model, param_grid, X_train, y_train, X_val, y_val):
-        """
-        Tune hyperparameters for a model.
-        
-        Args:
-            model_name (str): Name of the model
-            model: Model instance
-            param_grid (dict): Parameter grid for hyperparameter tuning
-            X_train, y_train: Training data
-            X_val, y_val: Validation data
-            
-        Returns:
-            Model with best parameters
-        """
-        # Use cross-validation if specified
-        if self.config['pipeline']['use_cross_validation']:
-            n_folds = self.config['pipeline']['n_folds']
-            cv = KFold(n_splits=n_folds, shuffle=True, random_state=self.model_config['common']['random_state'])
-            
-            # Check if we should use GridSearchCV or Optuna
-            if isinstance(param_grid, dict) and len(param_grid) <= 5:
-                # Use GridSearchCV for small parameter spaces
-                grid_search = GridSearchCV(
-                    model, param_grid, cv=cv, scoring='neg_mean_squared_error', 
-                    n_jobs=self.model_config['common']['n_jobs']
-                )
-                grid_search.fit(X_train, y_train)
-                
-                best_params = grid_search.best_params_
-                best_model = grid_search.best_estimator_
-                
-            else:
-                # Use Optuna for larger parameter spaces
-                best_params, best_model = self._optuna_tuning(
-                    model_name, model, param_grid, X_train, y_train, cv
-                )
-                
-        else:
-            # Use validation set directly
-            best_params, best_model = self._optuna_tuning(
-                model_name, model, param_grid, X_train, y_train, None, X_val, y_val
+        # If validation set is required
+        validation_size = self.data_config.get('validation_size', 0.25)
+        if validation_size > 0:
+            train_size = 1 - validation_size
+            X_train, X_val, y_train, y_val = train_test_split(
+                X_train, y_train, train_size=train_size, random_state=random_state
             )
+            return X_train, X_val, X_test, y_train, y_val, y_test
         
-        # Store best parameters
-        self.best_params[model_name] = best_params
-        logger.info(f"Best parameters for {model_name}: {best_params}")
-        
-        return best_model
+        return X_train, X_test, y_train, y_test
     
-    def _optuna_tuning(self, model_name, model, param_grid, X_train, y_train, cv=None, X_val=None, y_val=None):
+    def train_temperature_models(self, features_data, target_column='Temperature_Sensor_.C'):
         """
-        Tune hyperparameters using Optuna.
+        Train regression models to predict temperature.
         
         Args:
-            model_name (str): Name of the model
-            model: Model instance
-            param_grid (dict): Parameter grid for hyperparameter tuning
-            X_train (pandas.DataFrame): Training features
-            y_train (pandas.Series): Training target
-            cv (KFold, optional): Cross-validation strategy
-            X_val (pandas.DataFrame, optional): Validation features
-            y_val (pandas.Series, optional): Validation target
+            features_data (DataFrame): DataFrame with features
+            target_column (str): Name of the temperature column
             
         Returns:
-            tuple: Best parameters and best model
+            Dictionary containing trained models and their performance metrics
         """
-        def objective(trial):
-            # Sample hyperparameters from the parameter grid
-            params = {key: trial.suggest_categorical(key, value) if isinstance(value, list) else trial.suggest_float(key, *value) for key, value in param_grid.items()}
-            model.set_params(**params)
+        self.logger.info("Starting temperature prediction model training")
+        
+        # Prepare data
+        data_splits = self.prepare_data(features_data, target_column)
+        if len(data_splits) == 6:
+            X_train, X_val, X_test, y_train, y_val, y_test = data_splits
+        else:
+            X_train, X_test, y_train, y_test = data_splits
+            X_val, y_val = None, None
+        
+        # Get enabled models from config
+        enabled_models = self.model_factory.get_enabled_models('regression')
+        
+        results = {}
+        best_metric = float('inf')  # Lower is better for regression metrics like RMSE
+        best_model = None
+        
+        # Train standard models
+        for model_name in enabled_models:
+            self.logger.info(f"Training {model_name} for temperature prediction")
             
-            # Perform cross-validation or use validation set
-            if cv:
-                scores = []
-                for train_idx, val_idx in cv.split(X_train):
-                    X_t, X_v = X_train.iloc[train_idx], X_train.iloc[val_idx]
-                    y_t, y_v = y_train.iloc[train_idx], y_train.iloc[val_idx]
-                    model.fit(X_t, y_t)
-                    preds = model.predict(X_v)
-                    score = np.mean((preds - y_v) ** 2)
-                    scores.append(score)
-                return np.mean(scores)
-            else:
-                model.fit(X_train, y_train)
-                preds = model.predict(X_val)
-                return np.mean((preds - y_val) ** 2)
+            # Create model
+            model = self.model_factory.create_model(model_name, 'regression')
+            
+            # Train model
+            model.train(X_train, y_train)
+            
+            # Evaluate model
+            metrics = model.evaluate(X_test, y_test)
+            
+            # Perform hyperparameter tuning if enabled
+            hyperparams = self.model_factory.get_model_hyperparameters(model_name)
+            if hyperparams:
+                self.logger.info(f"Performing hyperparameter tuning for {model_name}")
+                
+                # Create a fresh model for tuning
+                tuning_model = self.model_factory.create_model(model_name, 'regression')
+                
+                # Prepare tuning data (use validation set if available)
+                X_tune = X_val if X_val is not None else X_train
+                y_tune = y_val if y_val is not None else y_train
+                
+                # Perform tuning
+                tuning_model, best_params = tuning_model.hyperparameter_tuning(
+                    X_tune, y_tune, param_grid=hyperparams, cv=self.n_folds
+                )
+                
+                # Evaluate tuned model
+                tuning_metrics = tuning_model.evaluate(X_test, y_test)
+                
+                # If tuned model is better, use it
+                if tuning_metrics['rmse'] < metrics['rmse']:
+                    model = tuning_model
+                    metrics = tuning_metrics
+                    self.logger.info(f"Tuned model is better: {metrics}")
+            
+            # Save model
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            model_path = os.path.join(self.models_dir, f"temp_{model_name}_{timestamp}.pkl")
+            model.save(model_path)
+            
+            # Record results
+            results[model_name] = {
+                'model': model,
+                'metrics': metrics,
+                'model_path': model_path
+            }
+            
+            # Update best model if needed
+            if metrics['rmse'] < best_metric:
+                best_metric = metrics['rmse']
+                best_model = model_name
         
-        study = optuna.create_study(direction='minimize')
-        study.optimize(objective, n_trials=self.config['pipeline']['optuna_trials'])
+        # Train advanced models
+        # 1. Adaptive Temperature Regressor
+        self.logger.info("Training Adaptive Temperature Regressor")
+        adaptive_model = self.model_factory.create_advanced_model('adaptive', 'regression')
+        adaptive_model.fit(X_train, y_train)
+        adaptive_metrics = self.model_evaluator.evaluate_regression_model(adaptive_model, X_test, y_test)
         
-        best_params = study.best_params
-        model.set_params(**best_params)
-        model.fit(X_train, y_train)
+        # Save adaptive model
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        adaptive_path = os.path.join(self.models_dir, f"temp_adaptive_{timestamp}.pkl")
+        joblib.dump(adaptive_model, adaptive_path)
         
-        return best_params, model
+        results['adaptive_temp'] = {
+            'model': adaptive_model,
+            'metrics': adaptive_metrics,
+            'model_path': adaptive_path
+        }
+        
+        # 2. Deep Temperature Regressor
+        self.logger.info("Training Deep Temperature Regressor")
+        deep_model = self.model_factory.create_advanced_model('deep', 'regression')
+        deep_model.fit(X_train, y_train)
+        deep_metrics = self.model_evaluator.evaluate_regression_model(deep_model, X_test, y_test)
+        
+        # Save deep model
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        deep_path = os.path.join(self.models_dir, f"temp_deep_{timestamp}.pkl")
+        joblib.dump(deep_model, deep_path)
+        
+        results['deep_temp'] = {
+            'model': deep_model,
+            'metrics': deep_metrics,
+            'model_path': deep_path
+        }
+        
+        # Update best model if any advanced model is better
+        if adaptive_metrics['rmse'] < best_metric:
+            best_metric = adaptive_metrics['rmse']
+            best_model = 'adaptive_temp'
+            
+        if deep_metrics['rmse'] < best_metric:
+            best_metric = deep_metrics['rmse']
+            best_model = 'deep_temp'
+        
+        # Log best model
+        self.logger.info(f"Best temperature prediction model: {best_model} with RMSE: {best_metric}")
+        
+        return results, best_model
+    
+    def train_plant_type_stage_models(self, features_data, target_column='Plant_Type_Stage'):
+        """
+        Train classification models to predict plant type-stage.
+        
+        Args:
+            features_data (DataFrame): DataFrame with features
+            target_column (str): Name of the plant type-stage column
+            
+        Returns:
+            Dictionary containing trained models and their performance metrics
+        """
+        self.logger.info("Starting plant type-stage classification model training")
+        
+        # Prepare data
+        data_splits = self.prepare_data(features_data, target_column)
+        if len(data_splits) == 6:
+            X_train, X_val, X_test, y_train, y_val, y_test = data_splits
+        else:
+            X_train, X_test, y_train, y_test = data_splits
+            X_val, y_val = None, None
+        
+        # Get enabled models from config
+        enabled_models = self.model_factory.get_enabled_models('classification')
+        
+        results = {}
+        best_metric = 0  # Higher is better for classification metrics like accuracy
+        best_model = None
+        
+        # Train standard models
+        for model_name in enabled_models:
+            self.logger.info(f"Training {model_name} for plant type-stage classification")
+            
+            # Create model
+            model = self.model_factory.create_model(model_name, 'classification')
+            
+            # Train model
+            model.train(X_train, y_train)
+            
+            # Evaluate model
+            metrics = model.evaluate(X_test, y_test)
+            
+            # Perform hyperparameter tuning if enabled
+            hyperparams = self.model_factory.get_model_hyperparameters(model_name)
+            if hyperparams:
+                self.logger.info(f"Performing hyperparameter tuning for {model_name}")
+                
+                # Create a fresh model for tuning
+                tuning_model = self.model_factory.create_model(model_name, 'classification')
+                
+                # Prepare tuning data (use validation set if available)
+                X_tune = X_val if X_val is not None else X_train
+                y_tune = y_val if y_val is not None else y_train
+                
+                # Perform tuning
+                tuning_model, best_params = tuning_model.hyperparameter_tuning(
+                    X_tune, y_tune, param_grid=hyperparams, cv=self.n_folds
+                )
+                
+                # Evaluate tuned model
+                tuning_metrics = tuning_model.evaluate(X_test, y_test)
+                
+                # If tuned model is better, use it
+                if tuning_metrics['f1_weighted'] > metrics['f1_weighted']:
+                    model = tuning_model
+                    metrics = tuning_metrics
+                    self.logger.info(f"Tuned model is better: {metrics}")
+            
+            # Save model
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            model_path = os.path.join(self.models_dir, f"plant_{model_name}_{timestamp}.pkl")
+            model.save(model_path)
+            
+            # Record results
+            results[model_name] = {
+                'model': model,
+                'metrics': metrics,
+                'model_path': model_path
+            }
+            
+            # Update best model if needed
+            if metrics['f1_weighted'] > best_metric:
+                best_metric = metrics['f1_weighted']
+                best_model = model_name
+        
+        # Train advanced models
+        # 1. Ensemble Plant Classifier
+        self.logger.info("Training Ensemble Plant Classifier")
+        ensemble_model = self.model_factory.create_advanced_model('ensemble', 'classification')
+        ensemble_model.fit(X_train, y_train)
+        ensemble_metrics = self.model_evaluator.evaluate_classification_model(ensemble_model, X_test, y_test)
+        
+        # Save ensemble model
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        ensemble_path = os.path.join(self.models_dir, f"plant_ensemble_{timestamp}.pkl")
+        model_data = {
+            'model': ensemble_model,
+            'label_encoder': ensemble_model.label_encoder
+        }
+        joblib.dump(model_data, ensemble_path)
+        
+        results['ensemble_plant'] = {
+            'model': ensemble_model,
+            'metrics': ensemble_metrics,
+            'model_path': ensemble_path
+        }
+        
+        # 2. Adaptive Plant Classifier
+        self.logger.info("Training Adaptive Plant Classifier")
+        # Find temperature feature index or name
+        temp_feature = 'Temperature_Sensor_.C'
+        temp_idx = None
+        if temp_feature in X_train.columns:
+            temp_idx = list(X_train.columns).index(temp_feature)
+        
+        adaptive_model = self.model_factory.create_advanced_model('adaptive', 'classification')
+        adaptive_model.fit(X_train, y_train, temp_feature_name=temp_feature, temp_feature_idx=temp_idx)
+        adaptive_metrics = self.model_evaluator.evaluate_classification_model(adaptive_model, X_test, y_test)
+        
+        # Save adaptive model
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        adaptive_path = os.path.join(self.models_dir, f"plant_adaptive_{timestamp}.pkl")
+        model_data = {
+            'model': adaptive_model,
+            'label_encoder': adaptive_model.label_encoder
+        }
+        joblib.dump(model_data, adaptive_path)
+        
+        results['adaptive_plant'] = {
+            'model': adaptive_model,
+            'metrics': adaptive_metrics,
+            'model_path': adaptive_path
+        }
+        
+        # Update best model if any advanced model is better
+        if ensemble_metrics['f1_weighted'] > best_metric:
+            best_metric = ensemble_metrics['f1_weighted']
+            best_model = 'ensemble_plant'
+            
+        if adaptive_metrics['f1_weighted'] > best_metric:
+            best_metric = adaptive_metrics['f1_weighted']
+            best_model = 'adaptive_plant'
+        
+        # Log best model
+        self.logger.info(f"Best plant type-stage model: {best_model} with F1: {best_metric}")
+        
+        return results, best_model

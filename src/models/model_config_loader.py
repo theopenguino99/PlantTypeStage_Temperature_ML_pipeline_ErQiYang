@@ -14,5 +14,6 @@ def load_model_config(a, b, c=None):
     return config_desired
 
 # Test the functions
-print(load_model_config('evaluation_classification', 'primary_metric'))
-print(load_model_config('evaluation_regression', 'primary_metric'))
+# print(load_model_config('evaluation_classification', 'primary_metric'))
+# print(load_model_config('evaluation_regression', 'primary_metric'))
+# print(load_model_config('models', 'random_forest', 'hyperparameter_tuning')['param_grid'])
