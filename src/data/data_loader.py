@@ -1,0 +1,109 @@
+"""
+Module for loading data from various sources.
+"""
+
+import os
+import pandas as pd
+import sqlite3
+from pathlib import Path
+from loguru import logger
+import load_preprocessing_config
+
+
+class DataLoader:
+    """Data loader class to load data from various sources."""
+    
+    def __init__(self, config):
+        """
+        Initialize the DataLoader.
+        
+        Args:
+            config (dict): Configuration dictionary
+        """
+        self.config = config
+        self.raw_data_path = os.path.join(Path(__file__).resolve().parents[2], config['paths']['raw_data'])
+        
+    def load_data(self):
+        """
+        Load the data from the specified source.
+        
+        Returns:
+            pandas.DataFrame: Loaded data
+        """
+        logger.info(f"Loading data from {self.raw_data_path}")
+        print(f"Loading data from {self.raw_data_path}")
+        
+        if not os.path.exists(self.raw_data_path):
+            logger.error(f"Data file not found: {self.raw_data_path}")
+            raise FileNotFoundError(f"Data file not found: {self.raw_data_path}")
+        
+        # Determine file type and load accordingly
+        file_extension = Path(self.raw_data_path).suffix.lower()
+        
+        if file_extension == '.csv':
+            df = pd.read_csv(self.raw_data_path)
+        elif file_extension in ['.xls', '.xlsx']:
+            df = pd.read_excel(self.raw_data_path)
+        elif file_extension == '.json':
+            df = pd.read_json(self.raw_data_path)
+        elif file_extension == '.parquet':
+            df = pd.read_parquet(self.raw_data_path)
+        elif file_extension == '.db':
+            df = self._load_from_sqlite(self.raw_data_path)
+        else:
+            logger.error(f"Unsupported file format: {file_extension}")
+            raise ValueError(f"Unsupported file format: {file_extension}")
+        
+        logger.info(f"Data loaded successfully with shape: {df.shape}")
+        logger.debug(f"Columns in data: {list(df.columns)}")
+        
+        return df
+    
+    def _load_from_sqlite(self, db_path):
+        """
+        Load data from an SQLite database.
+        
+        Args:
+            db_path (str): Path to the SQLite database file
+        
+        Returns:
+            pandas.DataFrame: Loaded data
+        """
+        conn = sqlite3.connect(db_path)
+        table_name = Path(db_path).stem  # Use the file name (without extension) as the table name
+        query = f"SELECT * FROM {table_name}"
+        df = pd.read_sql_query(query, conn)
+        conn.close()
+        return df
+    
+    def save_data(self, df, filepath):
+        """
+        Save data to the specified path.
+        
+        Args:
+            df (pandas.DataFrame): DataFrame to save
+            filepath (str): Path to save the data
+        """
+        directory = os.path.dirname(filepath)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+            
+        file_extension = Path(filepath).suffix.lower()
+        
+        if file_extension == '.csv':
+            df.to_csv(filepath, index=False)
+        elif file_extension in ['.xls', '.xlsx']:
+            df.to_excel(filepath, index=False)
+        elif file_extension == '.json':
+            df.to_json(filepath, orient='records')
+        elif file_extension == '.parquet':
+            df.to_parquet(filepath, index=False)
+        else:
+            logger.error(f"Unsupported file format for saving: {file_extension}")
+            raise ValueError(f"Unsupported file format for saving: {file_extension}")
+        
+        logger.info(f"Data saved successfully to {filepath}")
+
+# # To test module
+# x = DataLoader({'paths': {'raw_data': 'data/raw/score.db'}})
+# print(x.load_data().head())
