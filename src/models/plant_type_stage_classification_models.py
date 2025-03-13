@@ -202,87 +202,93 @@ class PlantTypeStageClassifier:
         return self, search.best_params_
 
 
-# class EnsemblePlantClassifier(BaseEstimator, ClassifierMixin):
-#     """
-#     An ensemble classifier that combines multiple models for plant type-stage classification
-#     using voting or stacking techniques.
-#     """
+class EnsemblePlantClassifier(BaseEstimator, ClassifierMixin):
+    """
+    An ensemble classifier that combines multiple models for plant type-stage classification
+    using voting or stacking techniques. We define a new class inherited from BaseEstimator
+    and ClassifierMixin to create a custom classifier that can be used with scikit-learn.
+    """
     
-#     def __init__(self, base_models=None, voting='soft', weights=None):
-#         self.base_models = base_models or [
-#             RandomForestClassifier(n_estimators=100, random_state=42),
-#             GradientBoostingClassifier(n_estimators=100, random_state=42),
-#             XGBClassifier(n_estimators=100, random_state=42)
-#         ]
-#         self.voting = voting  # 'hard' or 'soft'
-#         self.weights = weights
-#         self.label_encoder = LabelEncoder()
-#         self.trained_models = None
-#         self.logger = logging.getLogger(__name__)
-#         self.classes_ = None
+    def __init__(self, base_models=None, voting='soft', weights=None):
+        random_state = load_model_config('common', 'random_state')
+        RFC_n_edtimators = load_model_config('models', 'random_forest', 'params')['n_estimators']
+        GBC_n_estimators = load_model_config('models', 'gradient_boosting', 'params')['n_estimators']
+        XGB_n_estimators = load_model_config('models', 'xgboost', 'params')['n_estimators']
+        
+        self.base_models = base_models or [
+            RandomForestClassifier(n_estimators=RFC_n_edtimators, random_state=random_state),
+            GradientBoostingClassifier(n_estimators=GBC_n_estimators, random_state=random_state),
+            XGBClassifier(n_estimators=XGB_n_estimators, random_state=random_state)
+        ]
+        self.voting = voting  # 'hard' or 'soft'
+        self.weights = weights
+        self.label_encoder = LabelEncoder()
+        self.trained_models = None
+        self.logger = logging.getLogger(__name__)
+        self.classes_ = None
     
-#     def fit(self, X, y):
-#         """Train all base models on the same data."""
-#         # Encode target labels
-#         y_encoded = self.label_encoder.fit_transform(y)
-#         self.classes_ = self.label_encoder.classes_
+    def fit(self, X, y):
+        """Train all base models on the same data."""
+        # Encode target labels
+        y_encoded = self.label_encoder.fit_transform(y)
+        self.classes_ = self.label_encoder.classes_
         
-#         # Train all base models
-#         self.trained_models = []
-#         for i, model in enumerate(self.base_models):
-#             self.logger.info(f"Training base model {i+1}/{len(self.base_models)}")
-#             model.fit(X, y_encoded)
-#             self.trained_models.append(model)
+        # Train all base models
+        self.trained_models = []
+        for i, model in enumerate(self.base_models):
+            self.logger.info(f"Training base model {i+1}/{len(self.base_models)}")
+            model.fit(X, y_encoded)
+            self.trained_models.append(model)
         
-#         return self
+        return self
     
-#     def predict(self, X):
-#         """Make predictions using voting from all base models."""
-#         if self.trained_models is None:
-#             raise ValueError("Models have not been trained yet.")
+    def predict(self, X):
+        """Make predictions using voting from all base models."""
+        if self.trained_models is None:
+            raise ValueError("Models have not been trained yet.")
         
-#         if self.voting == 'hard':
-#             # Get predictions from each model
-#             predictions = np.array([model.predict(X) for model in self.trained_models])
+        if self.voting == 'hard':
+            # Get predictions from each model
+            predictions = np.array([model.predict(X) for model in self.trained_models])
             
-#             # Transpose to get predictions per sample
-#             predictions = predictions.T
+            # Transpose to get predictions per sample
+            predictions = predictions.T
             
-#             # Use majority voting
-#             final_pred = np.apply_along_axis(
-#                 lambda x: np.bincount(x, weights=self.weights).argmax(), 
-#                 axis=1, 
-#                 arr=predictions
-#             )
-#         else:  # soft voting
-#             # Get probability predictions
-#             probas = self.predict_proba(X)
-#             final_pred = np.argmax(probas, axis=1)
+            # Use majority voting
+            final_pred = np.apply_along_axis(
+                lambda x: np.bincount(x, weights=self.weights).argmax(), 
+                axis=1, 
+                arr=predictions
+            )
+        else:  # soft voting
+            # Get probability predictions
+            probas = self.predict_proba(X)
+            final_pred = np.argmax(probas, axis=1)
         
-#         # Convert back to original labels
-#         return self.label_encoder.inverse_transform(final_pred)
+        # Convert back to original labels
+        return self.label_encoder.inverse_transform(final_pred)
     
-#     def predict_proba(self, X):
-#         """Make probability predictions using averaging from all base models."""
-#         if self.trained_models is None:
-#             raise ValueError("Models have not been trained yet.")
+    def predict_proba(self, X):
+        """Make probability predictions using averaging from all base models."""
+        if self.trained_models is None:
+            raise ValueError("Models have not been trained yet.")
         
-#         # Get probability predictions from each model
-#         all_probas = []
-#         for i, model in enumerate(self.trained_models):
-#             if hasattr(model, 'predict_proba'):
-#                 proba = model.predict_proba(X)
-#                 all_probas.append(proba)
+        # Get probability predictions from each model
+        all_probas = []
+        for i, model in enumerate(self.trained_models):
+            if hasattr(model, 'predict_proba'):
+                proba = model.predict_proba(X)
+                all_probas.append(proba)
         
-#         # Average probabilities (with weights if provided)
-#         if self.weights:
-#             weights = np.array(self.weights)
-#             weights = weights / weights.sum()  # Normalize weights
-#             final_probas = np.average(np.array(all_probas), axis=0, weights=weights)
-#         else:
-#             final_probas = np.mean(np.array(all_probas), axis=0)
+        # Average probabilities (with weights if provided)
+        if self.weights:
+            weights = np.array(self.weights)
+            weights = weights / weights.sum()  # Normalize weights
+            final_probas = np.average(np.array(all_probas), axis=0, weights=weights)
+        else:
+            final_probas = np.mean(np.array(all_probas), axis=0)
         
-#         return final_probas
+        return final_probas
 
 
 # class AdaptivePlantClassifier(BaseEstimator, ClassifierMixin):

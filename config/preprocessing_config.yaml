@@ -3,22 +3,23 @@
 # Columns information
 columns:
   categorical:
-    - direct_admission
-    - CCA
-    - learning_style
-    - gender
-    - tuition
-    - mode_of_transport
-    - bag_color
+    - System Location Code
+    - Previous Cycle Plant Type
+    - Plant Type
+    - Plant Stage
   
   numerical:
-    - number_of_siblings
-    - final_test
-    - n_male
-    - n_female
-    - age
-    - hours_per_week
-    - attendance_rate
+    - Temperature Sensor (°C)
+    - Humidity Sensor (%)
+    - Light Intensity Sensor (lux)
+    - CO2 Sensor (ppm)
+    - EC Sensor (dS/m)
+    - O2 Sensor (ppm)
+    - Nutrient N Sensor (ppm)
+    - Nutrient P Sensor (ppm)
+    - Nutrient K Sensor (ppm)
+    - pH Sensor
+    - Water Level Sensor (mm)
   
   datetime:
     - sleep_time
@@ -31,14 +32,34 @@ columns:
 
 # Data cleaning settings
 cleaning:
+  clean_Nutrient_Sensor:
+    enabled: true
+    columns:
+      - Nutrient N Sensor (ppm)
+      - Nutrient P Sensor (ppm)
+      - Nutrient K Sensor (ppm)
+      
+  handle_negative_values:
+    enabled: true
+    columns:
+      - Temperature Sensor (°C)
+      - Light Intensity Sensor (lux)
+    strategy: absolute  # Options: remove, absolute
+  
+  map_labels_to_lowercase:
+    enabled: true
+    columns:
+      - Plant Type 
+      - Plant Stage
+  
   handle_duplicates:
     enabled: true
     ignore_columns:
-      - index
-      - bag_color
+      none
     keep: first
   
   handle_missing_values:
+    enabled: true
     numerical:
       strategy: median  # Options: mean, median, mode, constant
       constant_value: 0  # Only used if strategy is constant
@@ -46,12 +67,9 @@ cleaning:
     categorical:
       strategy: mode  # Options: mode, constant
       constant_value: "unknown"  # Only used if strategy is constant
-    
-    datetime:
-      strategy: mode  # Options: mode, constant
-      constant_value: null  # Only used if strategy is constant
   
   handle_outliers:
+    enabled: false 
     method: iqr  # Options: iqr, zscore, none
     iqr_multiplier: 1.5
     zscore_threshold: 3.0
@@ -59,6 +77,17 @@ cleaning:
       - age
       - hours_per_week
       - attendance_rate
+      - Temperature Sensor (°C)
+      - Humidity Sensor (%)
+      - Light Intensity Sensor (lux)
+      - CO2 Sensor (ppm)
+      - EC Sensor (dS/m)
+      - O2 Sensor (ppm)
+      - Nutrient N Sensor (ppm)
+      - Nutrient P Sensor (ppm)
+      - Nutrient K Sensor (ppm)
+      - pH Sensor
+      - Water Level Sensor (mm)
 
 # Feature preprocessing
 preprocessing:
@@ -76,41 +105,36 @@ preprocessing:
 
 # Feature engineering
 feature_engineering:
-  create_sleep_duration:
+  create_nutrient_balance_index:
     enabled: true
     from_columns:
-      - sleep_time
-      - wake_time
-    
-  create_class_size:
+      - Nutrient N Sensor (ppm)
+      - Nutrient P Sensor (ppm)
+      - Nutrient K Sensor (ppm)
+
+  create_environmental_stress_index:
     enabled: true
     from_columns:
-      - n_male
-      - n_female
-    
-  create_gender_ratio:
+      - Temperature Sensor (°C)
+      - Humidity Sensor (%)
+      - Light Intensity Sensor (lux)
+      - CO2 Sensor (ppm)
+      - O2 Sensor (ppm)
+
+  create_water_quality_score:
     enabled: true
     from_columns:
-      - n_male
-      - n_female
-  
-  create_study_efficiency:
-    enabled: true
-    from_columns:
-      - hours_per_week
-      - attendance_rate
-  
+      - pH Sensor
+      - EC Sensor (dS/m)
+      - Water Level Sensor (mm)
+
   standardize_categorical:
     enabled: true
     columns:
-      tuition:
-        mapping:
-          "Yes": "Yes"
-          "Y": "Yes"
-          "No": "No"
-          "N": "No"
-      CCA:
-        to_lowercase: true
+      - Previous Cycle Plant Type
+      - Plant Type
+      - Plant Stage
+
 
 # Feature selection
 feature_selection:

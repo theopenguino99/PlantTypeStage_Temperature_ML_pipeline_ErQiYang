@@ -39,16 +39,79 @@ class DataCleaner:
         df_cleaned = df.copy()
         
         # Apply each cleaning step
+        df_cleaned = self.clean_nutrient_sensors(df_cleaned)
+        df_cleaned = self._map_labels_to_lowercase(df_cleaned)
+        df_cleaned = self._handle_negative_values(df_cleaned)
         df_cleaned = self._handle_duplicates(df_cleaned)
         df_cleaned = self._handle_missing_values(df_cleaned)
-        df_cleaned = self._clean_categorical_variables(df_cleaned)
-        df_cleaned = self._clean_numerical_variables(df_cleaned)
-        df_cleaned = self._clean_datetime_variables(df_cleaned)
         df_cleaned = self._handle_outliers(df_cleaned)
         
         logger.info(f"Data cleaning completed. Final shape: {df_cleaned.shape}")
         
         return df_cleaned
+    def clean_nutrient_sensors(self, df):
+        """
+        Clean and extract numerical values from nutrient sensor columns.
+        
+        Args:
+            df (pandas.DataFrame): Input dataframe
+            
+        Returns:
+            pandas.DataFrame: Dataframe with cleaned nutrient sensor columns
+        """
+        if not self.preprocessing_config['cleaning']['clean_Nutrient_Sensor']['enabled']:
+            return df
+        
+        logger.info("Cleaning nutrient sensor columns")
+        
+        nutrient_columns = self.preprocessing_config['cleaning']['clean_Nutrient_Sensor']['columns']
+        
+        for col in nutrient_columns:
+            if col in df.columns:
+                logger.info(f"Extracting numerical values from {col}")
+                df[col] = df[col].str.extract('(\d+)', expand=False).astype(float)
+        
+        return df
+        
+    def _map_labels_to_lowercase(self, df):
+        """Map capitalized labels in specified columns to lowercase."""
+        if not self.preprocessing_config['cleaning']['map_labels_to_lowercase']['enabled']:
+            return df
+        
+        logger.info("Mapping labels to lowercase")
+        
+        columns_to_map = self.preprocessing_config['cleaning']['map_labels_to_lowercase']['columns']
+        
+        for col in columns_to_map:
+            if col in df.columns:
+                logger.info(f"Mapping labels in {col} to lowercase")
+                df[col] = df[col].str.lower()
+        
+        return df
+    
+    def _handle_negative_values(self, df):
+        """Handle negative values in specified columns."""
+        if not self.preprocessing_config['cleaning']['handle_negative_values']['enabled']:
+            return df
+        
+        logger.info("Handling negative values in specified columns")
+        
+        columns_to_handle = self.preprocessing_config['cleaning']['handle_negative_values']['columns']
+        strategy = self.preprocessing_config['cleaning']['handle_negative_values']['strategy']
+        
+        for col in columns_to_handle:
+            if col in df.columns:
+                negative_count = (df[col] < 0).sum()
+                if negative_count > 0:
+                    logger.info(f"Found {negative_count} negative values in {col}")
+                    if strategy == 'remove':
+                        df = df[df[col] >= 0]
+                        logger.info(f"Removed rows with negative values in {col}")
+                    elif strategy == 'absolute':
+                        df[col] = df[col].abs()
+                        logger.info(f"Converted negative values to absolute in {col}")
+        
+        return df
     
     def _handle_duplicates(self, df):
         """Handle duplicate rows in the dataframe."""
@@ -75,12 +138,13 @@ class DataCleaner:
     
     def _handle_missing_values(self, df):
         """Handle missing values in the dataframe."""
+        if not self.preprocessing_config['cleaning']['handle_missing_values']['enabled']:
+            return df
         logger.info("Handling missing values")
         
         # Get missing value configurations
         num_strategy = self.preprocessing_config['cleaning']['handle_missing_values']['numerical']['strategy']
         cat_strategy = self.preprocessing_config['cleaning']['handle_missing_values']['categorical']['strategy']
-        dt_strategy = self.preprocessing_config['cleaning']['handle_missing_values']['datetime']['strategy']
         
         # Get column lists
         num_cols = self.preprocessing_config['columns']['numerical']
@@ -114,15 +178,6 @@ class DataCleaner:
                     const_val = self.preprocessing_config['cleaning']['handle_missing_values']['categorical']['constant_value']
                     df[col] = df[col].fillna(const_val)
         
-        # Handle missing datetime values
-        for col in dt_cols:
-            if col in df.columns and df[col].isnull().sum() > 0:
-                if dt_strategy == 'mode':
-                    df[col] = df[col].fillna(df[col].mode()[0])
-                elif dt_strategy == 'constant':
-                    const_val = self.preprocessing_config['cleaning']['handle_missing_values']['datetime']['constant_value']
-                    df[col] = df[col].fillna(const_val)
-        
         # Report missing values after imputation
         missing_info_after = df.isnull().sum()
         if missing_info_after.sum() > 0:
@@ -130,78 +185,11 @@ class DataCleaner:
         
         return df
     
-    def _clean_categorical_variables(self, df):
-        """Clean and standardize categorical variables."""
-        logger.info("Cleaning categorical variables")
-        
-        # Standardize categorical variables specified in config
-        if self.preprocessing_config['feature_engineering']['standardize_categorical']['enabled']:
-            for col, settings in self.preprocessing_config['feature_engineering']['standardize_categorical']['columns'].items():
-                if col in df.columns:
-                    # Apply mapping if defined
-                    if 'mapping' in settings:
-                        logger.info(f"Applying mapping to {col}")
-                        df[col] = df[col].map(settings['mapping']).fillna(df[col])
-                    
-                    # Convert to lowercase if specified
-                    if 'to_lowercase' in settings and settings['to_lowercase'] and df[col].dtype == 'object':
-                        logger.info(f"Converting {col} to lowercase")
-                        df[col] = df[col].str.lower()
-        
-        return df
-    
-    def _clean_numerical_variables(self, df):
-        """Clean numerical variables, such as age in this case."""
-        logger.info("Cleaning numerical variables")
-        
-        # In this example, we'll handle the age column as mentioned in the requirements
-        if 'age' in df.columns:
-            logger.info("Cleaning age column")
-            
-            # Identify invalid age values (not 15 or 16)
-            mask = ~df['age'].isin([15, 16])
-            invalid_age_count = mask.sum()
-            
-            if invalid_age_count > 0:
-                logger.warning(f"Found {invalid_age_count} invalid age values. Replacing with median age.")
-                
-                # Replace invalid ages with median of valid ages
-                valid_ages = df.loc[~mask, 'age']
-                median_age = valid_ages.median() if not valid_ages.empty else 15.5
-                df.loc[mask, 'age'] = median_age
-        
-        return df
-    
-    def _clean_datetime_variables(self, df):
-        """Clean and convert datetime variables."""
-        logger.info("Cleaning datetime variables")
-        
-        datetime_cols = self.preprocessing_config['columns']['datetime']
-        
-        for col in datetime_cols:
-            if col in df.columns:
-                # Convert to proper datetime format if it's not already
-                if df[col].dtype == 'object':
-                    logger.info(f"Converting {col} to proper datetime format")
-                    try:
-                        # For sleep_time and wake_time, we'll assume they're in HH:MM format
-                        df[col] = pd.to_datetime(df[col], format='%H:%M', errors='coerce')
-                    except Exception as e:
-                        logger.error(f"Error converting {col} to datetime: {e}")
-                
-                # Handle missing datetime values
-                if df[col].isnull().sum() > 0:
-                    dt_strategy = self.preprocessing_config['cleaning']['handle_missing_values']['datetime']['strategy']
-                    if dt_strategy == 'mode':
-                        df[col] = df[col].fillna(df[col].mode()[0])
-                    elif dt_strategy == 'constant':
-                        const_val = self.preprocessing_config['cleaning']['handle_missing_values']['datetime']['constant_value']
-                        df[col] = df[col].fillna(const_val)
-        
-        return df
     
     def _handle_outliers(self, df):
         """Handle outliers in numerical features based on the specified strategy."""
+        if not self.preprocessing_config['cleaning']['handle_outliers']['enabled']:
+            return df
         logger.info("Handling outliers")
         
         if self.preprocessing_config['cleaning']['handle_outliers']==None:
@@ -237,4 +225,5 @@ class DataCleaner:
 # df = DataLoader().load_data()
 # cleaner = DataCleaner()
 # cleaned_data = cleaner.clean_data(df)
-# cleaned_data.head()
+# print(cleaned_data.head())
+# print(cleaned_data.info())
