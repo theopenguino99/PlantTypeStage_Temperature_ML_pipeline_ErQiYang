@@ -9,18 +9,18 @@ import sys
 import yaml
 from pathlib import Path
 
-from src.utils.logger import setup_logger
-from src.utils.config_parser import load_config
-from src.data.data_loader import DataLoader
-from src.data.data_cleaner import DataCleaner
-from src.data.data_preprocessor import DataPreprocessor
-from src.features.feature_engineering import FeatureEngineer
-from src.features.feature_selection import FeatureSelector
-from src.models.model_trainer import ModelTrainer
-from src.models.model_evaluator import ModelEvaluator
-from src.visualization.visualizer import Visualizer
+# Add the src directory to sys.path
 
-logger = setup_logger()
+from loguru import logger
+from config_loader import load_config
+from data_loader import DataLoader
+from data_cleaner import DataCleaner
+from data_preprocessor import DataPreprocessor
+from feature_engineering import FeatureEngineer
+from feature_selection import FeatureSelector
+from model_trainer import ModelTrainer
+from model_evaluator import ModelEvaluator
+from visualization.visualizer import Visualizer
 
 def parse_arguments():
     """Parse command line arguments."""
@@ -54,20 +54,20 @@ def main():
         data_cleaner = DataCleaner(config)
         cleaned_data = data_cleaner.clean_data(data)
         
-        # Preprocess data
-        logger.info("Preprocessing data")
-        preprocessor = DataPreprocessor(config)
-        preprocessed_data = preprocessor.preprocess(cleaned_data)
+        # Feature selection
+        logger.info("Selecting features")
+        feature_selector = FeatureSelector(config)
+        X_train, X_val, X_test, y_train, y_val, y_test = feature_selector.select_features(feature_data)
         
         # Feature engineering
         logger.info("Engineering features")
         feature_engineer = FeatureEngineer(config)
         feature_data = feature_engineer.engineer_features(preprocessed_data)
         
-        # Feature selection
-        logger.info("Selecting features")
-        feature_selector = FeatureSelector(config)
-        X_train, X_val, X_test, y_train, y_val, y_test = feature_selector.select_features(feature_data)
+        # Preprocess data
+        logger.info("Preprocessing data")
+        preprocessor = DataPreprocessor(config)
+        preprocessed_data = preprocessor.preprocess(cleaned_data)
         
         # Train models
         logger.info("Training models")
@@ -100,3 +100,7 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
+# Test the main function
+
+

@@ -13,7 +13,7 @@ from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report, confusion_matrix
 import joblib
 import os
-import logging
+from loguru import logger
 from collections import Counter
 from model_config_loader import load_model_config
 
@@ -26,7 +26,6 @@ class PlantTypeStageClassifier:
         self.scaler = scaler
         self.model = None
         self.label_encoder = LabelEncoder()
-        self.logger = logging.getLogger(__name__)
         self.metric = load_model_config('evaluation_classification', 'primary_metric')
     
     def build_model(self):
@@ -67,8 +66,8 @@ class PlantTypeStageClassifier:
         # Encode target labels
         y_encoded = self.label_encoder.fit_transform(y_train)
         
-        self.logger.info(f"Training {self.model_name} model for plant type-stage classification")
-        self.logger.info(f"Class distribution: {Counter(y_train)}")
+        logger.info(f"Training {self.model_name} model for plant type-stage classification")
+        logger.info(f"Class distribution: {Counter(y_train)}")
         self.model.fit(X_train, y_encoded)
         return self
     
@@ -129,7 +128,7 @@ class PlantTypeStageClassifier:
         }
         
         joblib.dump(model_data, filepath)
-        self.logger.info(f"Model saved to {filepath}")
+        logger.info(f"Model saved to {filepath}")
     
     def load(self, filepath):
         """Load the model and label encoder from disk."""
@@ -142,7 +141,7 @@ class PlantTypeStageClassifier:
         self.model_name = model_data['model_name']
         self.model_params = model_data['model_params']
         
-        self.logger.info(f"Model loaded from {filepath}")
+        logger.info(f"Model loaded from {filepath}")
         return self
     
     def hyperparameter_tuning(self, X, y, param_grid=None, cv=5, n_jobs=-1, method='grid'):
@@ -159,7 +158,7 @@ class PlantTypeStageClassifier:
             elif self.model_name == "lightgbm":
                 param_grid = load_model_config('models', 'lightgbm', 'hyperparameter_tuning')['param_grid']
             else:
-                self.logger.warning(f"No default param grid for {self.model_name}. Using empty grid.")
+                logger.warning(f"No default param grid for {self.model_name}. Using empty grid.")
                 param_grid = {}
     ################### THis might cause an error due to more grid para in yaml file############################
         
@@ -175,11 +174,11 @@ class PlantTypeStageClassifier:
             search = RandomizedSearchCV(base_model, param_grid, cv=cv, n_jobs=n_jobs,
                                        scoring=scoring, n_iter=20)
         
-        self.logger.info(f"Performing {method} search for hyperparameter tuning")
+        logger.info(f"Performing {method} search for hyperparameter tuning")
         search.fit(X, y_encoded)
         
         # Update model with best parameters
-        self.logger.info(f"Best parameters: {search.best_params_}")
+        logger.info(f"Best parameters: {search.best_params_}")
         
         # Update model parameters and rebuild model
         if hasattr(search, 'best_estimator_'):
@@ -224,7 +223,6 @@ class EnsemblePlantClassifier(BaseEstimator, ClassifierMixin):
         self.weights = weights
         self.label_encoder = LabelEncoder()
         self.trained_models = None
-        self.logger = logging.getLogger(__name__)
         self.classes_ = None
     
     def fit(self, X, y):
@@ -236,7 +234,7 @@ class EnsemblePlantClassifier(BaseEstimator, ClassifierMixin):
         # Train all base models
         self.trained_models = []
         for i, model in enumerate(self.base_models):
-            self.logger.info(f"Training base model {i+1}/{len(self.base_models)}")
+            logger.info(f"Training base model {i+1}/{len(self.base_models)}")
             model.fit(X, y_encoded)
             self.trained_models.append(model)
         
@@ -291,140 +289,135 @@ class EnsemblePlantClassifier(BaseEstimator, ClassifierMixin):
         return final_probas
 
 
-# class AdaptivePlantClassifier(BaseEstimator, ClassifierMixin):
-#     """
-#     An adaptive classifier that adjusts its behavior based on sensor readings
-#     and time-based features for plant type-stage classification.
-#     """
+class AdaptivePlantClassifier(BaseEstimator, ClassifierMixin):
+    """
+    An adaptive classifier that adjusts its behavior based on sensor readings
+    and time-based features for plant type-stage classification.
+    """
     
-#     def __init__(self, models_config=None):
-#         """
-#         Initialize the adaptive classifier with specialized models for different conditions.
+    def __init__(self):
+        """
+        Initialize the adaptive classifier with specialized models for different conditions.
+        """
+        config = load_model_config('models', 'adaptive_classifier')
+        self.models_config = config['models_config']
+        self.default_model_config = config['default_model']
         
-#         Args:
-#             models_config: Dictionary mapping condition ranges to specific models
-#         """
-#         if models_config is None:
-#             # Default configuration with temperature ranges and corresponding models
-#             self.models_config = {
-#                 'low_temp': {
-#                     'range': (float('-inf'), 15.0),  # Temperature < 15°C
-#                     'model': RandomForestClassifier(n_estimators=150, random_state=42)
-#                 },
-#                 'medium_temp': {
-#                     'range': (15.0, 25.0),  # 15°C <= Temperature < 25°C
-#                     'model': GradientBoostingClassifier(n_estimators=100, random_state=42)
-#                 },
-#                 'high_temp': {
-#                     'range': (25.0, float('inf')),  # Temperature >= 25°C
-#                     'model': XGBClassifier(n_estimators=100, random_state=42)
-#                 }
-#             }
-#         else:
-#             self.models_config = models_config
+        self.trained_models = {}
+        self.default_model = self._build_model(self.default_model_config)
+        self.label_encoder = LabelEncoder()
+        self.temp_feature_idx = None  # Will be determined during fit
+        self.classes_ = None
+        
+    def _build_model(self, model_config):
+        """Build a model based on the provided configuration."""
+        model_name = model_config['model']
+        model_params = model_config['params']
+        
+        if model_name == "random_forest":
+            return RandomForestClassifier(**model_params)
+        elif model_name == "gradient_boosting":
+            return GradientBoostingClassifier(**model_params)
+        elif model_name == "xgboost":
+            return XGBClassifier(**model_params)
+        else:
+            raise ValueError(f"Unknown model type: {model_name}")
+    
+    def _get_model_for_conditions(self, X_sample):
+        """Determine which model to use based on environmental conditions."""
+        if self.temp_feature_idx is None:
+            return self.default_model
             
-#         self.trained_models = {}
-#         self.default_model = RandomForestClassifier(n_estimators=100, random_state=42)
-#         self.label_encoder = LabelEncoder()
-#         self.temp_feature_idx = None  # Will be determined during fit
-#         self.logger = logging.getLogger(__name__)
-#         self.classes_ = None
+        temperature = X_sample[self.temp_feature_idx]
         
-#     def _get_model_for_conditions(self, X_sample):
-#         """Determine which model to use based on environmental conditions."""
-#         if self.temp_feature_idx is None:
-#             return self.default_model
-            
-#         temperature = X_sample[self.temp_feature_idx]
-        
-#         for config_name, config in self.models_config.items():
-#             low, high = config['range']
-#             if low <= temperature < high:
-#                 return self.trained_models.get(config_name, self.default_model)
+        for config_name, config in self.models_config.items():
+            low, high = config['range']
+            if low <= temperature < high:
+                return self.trained_models.get(config_name, self.default_model)
                 
-#         return self.default_model
+        return self.default_model
     
-#     def fit(self, X, y, temp_feature_name=None, temp_feature_idx=None):
-#         """
-#         Train specialized models for different environmental conditions.
+    def fit(self, X, y, temp_feature_name=None, temp_feature_idx=None):
+        """
+        Train specialized models for different environmental conditions.
         
-#         Args:
-#             X: Feature matrix
-#             y: Target labels
-#             temp_feature_name: Name of the temperature feature (if X is DataFrame)
-#             temp_feature_idx: Index of the temperature feature (if X is numpy array)
-#         """
-#         # Encode target labels
-#         y_encoded = self.label_encoder.fit_transform(y)
-#         self.classes_ = self.label_encoder.classes_
+        Args:
+            X: Feature matrix
+            y: Target labels
+            temp_feature_name: Name of the temperature feature (if X is DataFrame)
+            temp_feature_idx: Index of the temperature feature (if X is numpy array)
+        """
+        # Encode target labels
+        y_encoded = self.label_encoder.fit_transform(y)
+        self.classes_ = self.label_encoder.classes_
         
-#         # Determine temperature feature index
-#         if temp_feature_name is not None and hasattr(X, 'columns'):
-#             self.temp_feature_idx = list(X.columns).index(temp_feature_name)
-#         elif temp_feature_idx is not None:
-#             self.temp_feature_idx = temp_feature_idx
-#         else:
-#             self.logger.warning("Temperature feature not specified. Using default model for all predictions.")
-#             self.default_model.fit(X, y_encoded)
-#             return self
+        # Determine temperature feature index
+        if temp_feature_name is not None and hasattr(X, 'columns'):
+            self.temp_feature_idx = list(X.columns).index(temp_feature_name)
+        elif temp_feature_idx is not None:
+            self.temp_feature_idx = temp_feature_idx
+        else:
+            logger.warning("Temperature feature not specified. Using default model for all predictions.")
+            self.default_model.fit(X, y_encoded)
+            return self
         
-#         # Train specialized models for each condition range
-#         for config_name, config in self.models_config.items():
-#             low, high = config['range']
-#             temp_values = X[:, self.temp_feature_idx] if isinstance(X, np.ndarray) else X.iloc[:, self.temp_feature_idx]
+        # Train specialized models for each condition range
+        for config_name, config in self.models_config.items():
+            low, high = config['range']
+            temp_values = X[:, self.temp_feature_idx] if isinstance(X, np.ndarray) else X.iloc[:, self.temp_feature_idx]
             
-#             # Filter data for this temperature range
-#             mask = (temp_values >= low) & (temp_values < high)
-#             if np.sum(mask) > 10:  # Only train if we have enough samples
-#                 X_subset = X[mask] if isinstance(X, np.ndarray) else X.iloc[mask]
-#                 y_subset = y_encoded[mask]
+            # Filter data for this temperature range
+            mask = (temp_values >= low) & (temp_values < high)
+            if np.sum(mask) > 10:  # Only train if we have enough samples
+                X_subset = X[mask] if isinstance(X, np.ndarray) else X.iloc[mask]
+                y_subset = y_encoded[mask]
                 
-#                 self.logger.info(f"Training model for {config_name} with {np.sum(mask)} samples")
-#                 model = config['model']
-#                 model.fit(X_subset, y_subset)
-#                 self.trained_models[config_name] = model
-#             else:
-#                 self.logger.warning(f"Not enough samples for {config_name} ({np.sum(mask)} samples)")
+                logger.info(f"Training model for {config_name} with {np.sum(mask)} samples")
+                model = self._build_model(config)
+                model.fit(X_subset, y_subset)
+                self.trained_models[config_name] = model
+            else:
+                logger.warning(f"Not enough samples for {config_name} ({np.sum(mask)} samples)")
         
-#         # Train default model on all data
-#         self.default_model.fit(X, y_encoded)
+        # Train default model on all data
+        self.default_model.fit(X, y_encoded)
         
-#         return self
+        return self
     
-#     def predict(self, X):
-#         """Make predictions using the appropriate model for each sample's conditions."""
-#         predictions = np.zeros(X.shape[0], dtype=int)
+    def predict(self, X):
+        """Make predictions using the appropriate model for each sample's conditions."""
+        predictions = np.zeros(X.shape[0], dtype=int)
         
-#         # For each sample, select the appropriate model and predict
-#         for i in range(X.shape[0]):
-#             X_sample = X[i] if isinstance(X, np.ndarray) else X.iloc[i]
-#             model = self._get_model_for_conditions(X_sample)
+        # For each sample, select the appropriate model and predict
+        for i in range(X.shape[0]):
+            X_sample = X[i] if isinstance(X, np.ndarray) else X.iloc[i]
+            model = self._get_model_for_conditions(X_sample)
             
-#             # Reshape for single sample prediction
-#             X_sample_reshaped = X_sample.reshape(1, -1) if isinstance(X_sample, np.ndarray) else pd.DataFrame([X_sample])
-#             predictions[i] = model.predict(X_sample_reshaped)[0]
+            # Reshape for single sample prediction
+            X_sample_reshaped = X_sample.reshape(1, -1) if isinstance(X_sample, np.ndarray) else pd.DataFrame([X_sample])
+            predictions[i] = model.predict(X_sample_reshaped)[0]
             
-#         # Convert back to original labels
-#         return self.label_encoder.inverse_transform(predictions)
+        # Convert back to original labels
+        return self.label_encoder.inverse_transform(predictions)
     
-#     def predict_proba(self, X):
-#         """Make probability predictions using the appropriate model for each sample."""
-#         n_classes = len(self.classes_)
-#         probas = np.zeros((X.shape[0], n_classes))
+    def predict_proba(self, X):
+        """Make probability predictions using the appropriate model for each sample."""
+        n_classes = len(self.classes_)
+        probas = np.zeros((X.shape[0], n_classes))
         
-#         # For each sample, select the appropriate model and predict probabilities
-#         for i in range(X.shape[0]):
-#             X_sample = X[i] if isinstance(X, np.ndarray) else X.iloc[i]
-#             model = self._get_model_for_conditions(X_sample)
+        # For each sample, select the appropriate model and predict probabilities
+        for i in range(X.shape[0]):
+            X_sample = X[i] if isinstance(X, np.ndarray) else X.iloc[i]
+            model = self._get_model_for_conditions(X_sample)
             
-#             # Reshape for single sample prediction
-#             X_sample_reshaped = X_sample.reshape(1, -1) if isinstance(X_sample, np.ndarray) else pd.DataFrame([X_sample])
+            # Reshape for single sample prediction
+            X_sample_reshaped = X_sample.reshape(1, -1) if isinstance(X_sample, np.ndarray) else pd.DataFrame([X_sample])
             
-#             if hasattr(model, 'predict_proba'):
-#                 probas[i] = model.predict_proba(X_sample_reshaped)[0]
-#             else:
-#                 # For models without predict_proba, use one-hot encoding based on prediction
-#                 pred = model.predict(X_sample_reshaped)[0]
-#                 probas[i, pred] = 1.0
+            if hasattr(model, 'predict_proba'):
+                probas[i] = model.predict_proba(X_sample_reshaped)[0]
+            else:
+                # For models without predict_proba, use one-hot encoding based on prediction
+                pred = model.predict(X_sample_reshaped)[0]
+                probas[i, pred] = 1.0
                 
-#         return probas
+        return probas

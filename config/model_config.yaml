@@ -103,6 +103,29 @@ models:
         num_leaves: [15, 31, 63]
         feature_fraction: [0.7, 0.8, 0.9]
 
+  adaptive_classifier:
+    enabled: true
+    models_config:
+      low_temp:
+        range: [-inf, 15.0]
+        model: random_forest
+        params:
+          n_estimators: 150
+      medium_temp:
+        range: [15.0, 25.0]
+        model: gradient_boosting
+        params:
+          n_estimators: 100
+      high_temp:
+        range: [25.0, inf]
+        model: xgboost
+        params:
+          n_estimators: 100
+    default_model:
+      model: random_forest
+      params:
+        n_estimators: 100
+
 # Model evaluation metrics for regression problem
 evaluation_regression:
   metrics:

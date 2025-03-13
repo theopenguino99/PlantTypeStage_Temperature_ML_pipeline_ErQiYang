@@ -56,7 +56,7 @@ class DataPreprocessor:
         
         # Save processed data
         print(self.config['paths']['processed_data'])
-        dir = os.path.join(Path(__file__).resolve().parents[2], self.config['paths']['processed_data'])
+        dir = os.path.join(Path(__file__).resolve().parents[1], self.config['paths']['processed_data'])
         df_processed.to_csv(dir, index=False)
         logger.info(f"Preprocessed data saved to {dir}")
         
