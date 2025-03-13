@@ -33,23 +33,20 @@ class FeatureEngineer:
         df_features = df.copy()
 
         # Apply each feature engineering step defined in the config
-        if self.config['create_nutrient_balance_index']['enabled']:
+        if self.preprocessing_config['feature_engineering']['create_nutrient_balance_index']['enabled']:
             df_features = self._create_nutrient_balance_index(df_features)
         
-        if self.config['create_environmental_stress_index']['enabled']:
+        if self.preprocessing_config['feature_engineering']['create_environmental_stress_index']['enabled']:
             df_features = self._create_environmental_stress_index(df_features)
         
-        if self.config['create_water_quality_score']['enabled']:
+        if self.preprocessing_config['feature_engineering']['create_water_quality_score']['enabled']:
             df_features = self._create_water_quality_score(df_features)
-        
-        if self.config['standardize_categorical']['enabled']:
-            df_features = self._standardize_categorical(df_features)
 
         return df_features
 
     def _create_nutrient_balance_index(self, df):
         """Create nutrient balance index from N, P, and K sensors."""
-        required_cols = self.config['create_nutrient_balance_index']['from_columns']
+        required_cols = self.preprocessing_config['feature_engineering']['create_nutrient_balance_index']['from_columns']
         if all(col in df.columns for col in required_cols):
             df['nutrient_balance_index'] = (
                 df[required_cols[0]].astype(float) +
@@ -60,7 +57,7 @@ class FeatureEngineer:
 
     def _create_environmental_stress_index(self, df):
         """Create environmental stress index using multiple environmental sensors."""
-        required_cols = self.config['create_environmental_stress_index']['from_columns']
+        required_cols = self.preprocessing_config['feature_engineering']['create_environmental_stress_index']['from_columns']
         if all(col in df.columns for col in required_cols):
             df['environmental_stress_index'] = (
                 df[required_cols[0]] +
@@ -73,7 +70,7 @@ class FeatureEngineer:
 
     def _create_water_quality_score(self, df):
         """Create water quality score based on pH, EC, and water level sensors."""
-        required_cols = self.config['create_water_quality_score']['from_columns']
+        required_cols = self.preprocessing_config['feature_engineering']['create_water_quality_score']['from_columns']
         if all(col in df.columns for col in required_cols):
             df['water_quality_score'] = (
                 df[required_cols[0]] +
@@ -82,18 +79,18 @@ class FeatureEngineer:
             ) / 3
         return df
 
-    def _standardize_categorical(self, df):
-        """Standardize categorical columns by converting them to lowercase."""
-        for col in self.config['standardize_categorical']['columns']:
-            if col in df.columns:
-                df[col] = df[col].str.lower()
-        return df
-# Test the feature engineering module
-if __name__ == "__main__":
-    from data_loader import DataLoader
-    from data_cleaner import DataCleaner
-    data_loader = DataLoader()
-    df = data_loader.load_data()
-    data_engineer = FeatureEngineer()
-    df_features = data_engineer.engineer_features(df)
-    print(df_features.head())
+# # Test the feature engineering module
+# if __name__ == "__main__":
+#     from data_loader import DataLoader
+#     from data_cleaner import DataCleaner
+#     from feature_selection import FeatureSelector
+
+#     data_loader = DataLoader()
+#     df = data_loader.load_data()
+#     cleaner = DataCleaner()
+#     df = cleaner.clean_data(df)
+#     feature_selector = FeatureSelector()
+#     df = feature_selector.select_features(df)
+#     data_engineer = FeatureEngineer()
+#     df_features = data_engineer.engineer_features(df)
+#     print(df_features.head())

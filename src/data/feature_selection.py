@@ -25,6 +25,14 @@ class FeatureSelector:
         self.config = load_config()
         self.selected_features = None
         self.preprocessing_config = load_preprocessing_config()
+        problem_type = self.config['data']['problem_type']
+        if problem_type == 'regression':
+            target_column = self.config['data']['target_num']
+        elif problem_type == 'classification':
+            target_column = self.config['data']['target_cat']
+        else:
+            raise ValueError(f"Unsupported problem type '{problem_type}'")
+        self.target_column = target_column
     
     
     def select_features(self, df):
@@ -50,9 +58,8 @@ class FeatureSelector:
             logger.info(f"Using {method} method for feature selection")
             
             # Extract target variable before feature selection
-            target_column = self.config['data']['target_column']
-            X = df_select.drop(columns=[target_column])
-            y = df_select[target_column]
+            X = df_select.drop(columns=[self.target_column])
+            y = df_select[self.target_column]
             
             # Select features based on the specified method
             if method == 'variance':
@@ -65,10 +72,7 @@ class FeatureSelector:
             # Combine features and target for splitting
             df_select = pd.concat([X, y], axis=1)
         
-        # Split the data into train, validation, and test sets
-        X_train, X_val, X_test, y_train, y_val, y_test = self._split_data(df_select)
-        
-        return X_train, X_val, X_test, y_train, y_val, y_test
+        return df_select
     
     def _select_by_variance(self, X):
         """Select features based on variance threshold."""
@@ -93,14 +97,13 @@ class FeatureSelector:
         
         # Calculate correlation with target
         X_with_target = pd.concat([X, y], axis=1)
-        target_column = self.config['data']['target_column']
-        correlation = X_with_target.corr()[target_column].abs().sort_values(ascending=False)
+        correlation = X_with_target.corr()[self.target_column].abs().sort_values(ascending=False)
         
         # Select features with correlation above threshold
         selected_features = correlation[correlation > threshold].index.tolist()
         # Remove target from selected features
-        if target_column in selected_features:
-            selected_features.remove(target_column)
+        if self.target_column in selected_features:
+            selected_features.remove(self.target_column)
         
         logger.info(f"Selected {len(selected_features)} features using correlation threshold")
         self.selected_features = selected_features
@@ -143,7 +146,7 @@ class FeatureSelector:
         logger.info("Splitting data into train, validation, and test sets")
         
         # Extract target variable
-        target_column = self.config['data']['target_column']
+        target_column = self.target_column
         X = df.drop(columns=[target_column])
         y = df[target_column]
         
@@ -173,3 +176,10 @@ class FeatureSelector:
 #     # Load data
 #     data_loader = DataLoader()
 #     data = data_loader.load_data()
+#     # Clean data
+#     data_cleaner = DataCleaner()
+#     data_cleaned = data_cleaner.clean_data(data)
+#     # Feature selection
+#     feature_selector = FeatureSelector()
+#     result = feature_selector.select_features(data_cleaned)
+#     print(  result.head()  )

@@ -1,8 +1,8 @@
 # Data preprocessing configuration
 
 # Columns information
-columns:
-  categorical:
+columns: 
+  categorical: # Columns to encode
     - System Location Code
     - Previous Cycle Plant Type
     - Plant Type
@@ -15,9 +15,9 @@ columns:
     - CO2 Sensor (ppm)
     - EC Sensor (dS/m)
     - O2 Sensor (ppm)
-    - Nutrient N Sensor (ppm)
-    - Nutrient P Sensor (ppm)
-    - Nutrient K Sensor (ppm)
+    - Nutrient N Sensor (ppm) # clean_Nutrient_Sensor has to be enabled
+    - Nutrient P Sensor (ppm) # clean_Nutrient_Sensor has to be enabled
+    - Nutrient K Sensor (ppm) # clean_Nutrient_Sensor has to be enabled
     - pH Sensor
     - Water Level Sensor (mm)
   
@@ -26,9 +26,7 @@ columns:
     - wake_time
   
   drop_columns:
-    - index
-    - student_id
-    - bag_color  # As mentioned, can be ignored for duplicate detection
+    none # Columns to drop from the dataset manually
 
 # Data cleaning settings
 cleaning:
@@ -97,11 +95,6 @@ preprocessing:
     
   numerical_scaling:
     method: standard  # Options: standard, minmax, robust, none
-    
-  datetime_features:
-    extract_hour: true
-    extract_minute: true
-    extract_time_difference: true  # For sleep_time and wake_time
 
 # Feature engineering
 feature_engineering:
@@ -127,13 +120,6 @@ feature_engineering:
       - pH Sensor
       - EC Sensor (dS/m)
       - Water Level Sensor (mm)
-
-  standardize_categorical:
-    enabled: true
-    columns:
-      - Previous Cycle Plant Type
-      - Plant Type
-      - Plant Stage
 
 
 # Feature selection

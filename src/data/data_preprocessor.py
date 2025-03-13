@@ -7,7 +7,7 @@ from pathlib import Path
 import os
 import pandas as pd 
 import numpy as np
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
 from category_encoders import OneHotEncoder, TargetEncoder
 from datetime import datetime
@@ -48,9 +48,6 @@ class DataPreprocessor:
         # Drop unnecessary columns
         df_processed = self._drop_columns(df_processed)
         
-        # Process datetime columns
-        df_processed = self._process_datetime_columns(df_processed)
-        
         # Encode categorical variables
         df_processed = self._encode_categorical_columns(df_processed)
         
@@ -75,64 +72,13 @@ class DataPreprocessor:
                 logger.info(f"Dropping columns: {columns_to_drop}")
                 df = df.drop(columns=columns_to_drop)
         return df
-    
-    def _process_datetime_columns(self, df):
-        """Process datetime columns to extract features."""
-        datetime_cols = self.preprocessing_config['columns']['datetime']
-        datetime_features = self.preprocessing_config['preprocessing']['datetime_features']
-        
-        for col in datetime_cols:
-            if col not in df.columns:
-                continue
-                
-            logger.info(f"Processing datetime column: {col}")
-            
-            # Convert to datetime if needed
-            if df[col].dtype == 'object':
-                try:
-                    # For time columns like sleep_time, wake_time
-                    df[col] = pd.to_datetime(df[col], format='%H:%M', errors='coerce')
-                except:
-                    # Try general datetime parsing
-                    df[col] = pd.to_datetime(df[col], errors='coerce')
-            
-            # Extract features if specified in config
-            col_prefix = f"{col}_"
-            
-            if datetime_features['extract_hour']:
-                df[f"{col_prefix}hour"] = df[col].dt.hour
-                
-            if datetime_features['extract_minute']:
-                df[f"{col_prefix}minute"] = df[col].dt.minute
-        
-        # Calculate time difference between sleep_time and wake_time
-        if (datetime_features['extract_time_difference'] and 
-            'sleep_time' in df.columns and 'wake_time' in df.columns):
-            
-            logger.info("Calculating sleep duration")
-            
-            # Convert times to total minutes for calculation
-            sleep_minutes = df['sleep_time'].dt.hour * 60 + df['sleep_time'].dt.minute
-            wake_minutes = df['wake_time'].dt.hour * 60 + df['wake_time'].dt.minute
-            
-            # Adjust for overnight sleep (when sleep_time > wake_time)
-            sleep_duration = np.where(
-                sleep_minutes > wake_minutes,
-                (24 * 60 - sleep_minutes) + wake_minutes,  # Overnight sleep
-                wake_minutes - sleep_minutes  # Same-day sleep
-            )
-            
-            df['sleep_duration'] = sleep_duration
-            
-            # Drop original datetime columns after extracting features
-            df = df.drop(columns=datetime_cols)
-        
-        return df
+
     
     def _encode_categorical_columns(self, df):
         """Encode categorical variables."""
-        categorical_cols = self.preprocessing_config['columns']['categorical']
-        categorical_cols = [col for col in categorical_cols if col in df.columns]
+        categorical_cols_2encode = self.preprocessing_config['columns']['categorical']
+        categorical_cols_not2encode = self.config['data']['target_cat']
+        categorical_cols = [col for col in categorical_cols_2encode if col in df.columns and col not in categorical_cols_not2encode]
         
         if not categorical_cols:
             return df
@@ -148,7 +94,6 @@ class DataPreprocessor:
             self.encoders['categorical'] = encoder
             
         elif encoding_method == 'label':
-            from sklearn.preprocessing import LabelEncoder
             for col in categorical_cols:
                 le = LabelEncoder()
                 df[col] = le.fit_transform(df[col].astype(str))
@@ -169,8 +114,9 @@ class DataPreprocessor:
     
     def _scale_numerical_columns(self, df):
         """Scale numerical variables."""
-        numerical_cols = self.preprocessing_config['columns']['numerical']
-        numerical_cols = [col for col in numerical_cols if col in df.columns]
+        numerical_cols_2encode = self.preprocessing_config['columns']['numerical']
+        numerical_cols_not2encode = self.config['data']['target_num']
+        numerical_cols = [col for col in numerical_cols_2encode if col in df.columns and col not in numerical_cols_not2encode]
         
         if not numerical_cols:
             return df
@@ -213,7 +159,14 @@ class DataPreprocessor:
         logger.info("Splitting data into train, validation, and test sets")
         
         # Extract target variable
-        target_column = self.config['data']['target_column']
+        problem_type = self.config['data']['problem_type']
+        
+        if problem_type == 'regression':
+            target_column = self.config['columns']['target_num']
+        elif problem_type == 'classification':
+            target_column = self.config['columns']['target_cat']
+        else:
+            raise ValueError(f"Unsupported problem type '{problem_type}'")
         
         if target_column not in df.columns:
             raise ValueError(f"Target column '{target_column}' not found in dataframe")
@@ -240,7 +193,7 @@ class DataPreprocessor:
         
         return X_train, X_val, X_test, y_train, y_val, y_test
 
-# To test module
+# # To test module
 # if __name__ == "__main__":
 #     from data_loader import DataLoader
 #     from data_cleaner import DataCleaner
@@ -250,4 +203,4 @@ class DataPreprocessor:
 #     cleaned_data = data_cleaner.clean_data(data)
 #     preprocessor = DataPreprocessor()
 #     preprocessed_data = preprocessor.preprocess(cleaned_data)
-#     preprocessed_data.head()
+#     print(preprocessed_data.head())
