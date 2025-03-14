@@ -1,101 +1,127 @@
 # Student Performance Prediction ML Pipeline
 
-This machine learning pipeline is designed to predict student performance (final_score) based on various features related to student demographics, behaviors, and academic background.
+This machine learning pipeline predicts student performance (`final_score`) using features derived from student demographics, behaviors, and academic background. The pipeline is modular, configurable, and designed for scalability.
 
-## Project Overview
+---
 
-This project implements an end-to-end machine learning pipeline for predicting student performance. The pipeline includes data cleaning, preprocessing, feature engineering, model training, evaluation, and prediction.
+## 📋 Project Overview
 
-### Dataset Features
+This project implements an end-to-end machine learning pipeline with the following stages:
 
-The dataset contains the following features:
-- index: Unique identifier
-- number_of_siblings: Number of siblings the student has
-- direct_admission: Whether the student was directly admitted
-- CCA: Co-curricular activities
-- learning_style: Student's learning style
-- student_id: Unique student identifier
-- gender: Student's gender
-- tuition: Whether the student takes tuition classes
-- final_test: Score in the final test
-- n_male: Number of male students in class
-- n_female: Number of female students in class
-- age: Student's age
-- hours_per_week: Study hours per week
-- attendance_rate: Attendance rate
-- sleep_time: Time the student goes to sleep
-- wake_time: Time the student wakes up
-- mode_of_transport: Transportation mode to school
-- bag_color: Color of the student's bag
+1. **Data Loading**: Load raw data from CSV files or databases.
+2. **Data Cleaning**: Handle missing values, duplicates, and outliers.
+3. **Data Preprocessing**: Encode categorical variables, normalize numerical features, and handle imbalanced datasets.
+4. **Feature Engineering**: Generate new features such as interaction terms and indices.
+5. **Model Training**: Train multiple ML models with hyperparameter tuning.
+6. **Model Evaluation**: Evaluate models using metrics like RMSE, MAE, and R².
+7. **Model Selection**: Select the best-performing model based on evaluation metrics.
+8. **Prediction**: Generate predictions on unseen data.
 
-The target variable is `final_score` (not shown in the feature list but mentioned as the label).
+---
 
-## Installation
+## 📊 Dataset Features
+
+The dataset includes the following features:
+
+### Categorical Features
+- **System Location Code**: Location of the system (e.g., Zone_A, Zone_B).
+- **Previous Cycle Plant Type**: Plant type from the previous cycle.
+- **Plant Type**: Current plant type (e.g., Fruiting Vegetables, Leafy Greens).
+- **Plant Stage**: Growth stage of the plant (e.g., maturity, seedling).
+
+### Numerical Features
+- **Temperature Sensor (°C)**: Temperature readings from sensors.
+- **Humidity Sensor (%)**: Humidity levels recorded by sensors.
+- **Light Intensity Sensor (lux)**: Light intensity measured in lux.
+- **CO2 Sensor (ppm)**: Carbon dioxide levels in parts per million.
+- **EC Sensor (dS/m)**: Electrical conductivity of the soil or water.
+- **O2 Sensor (ppm)**: Oxygen levels in parts per million.
+- **Nutrient N Sensor (ppm)**: Nitrogen levels in parts per million.
+- **Nutrient P Sensor (ppm)**: Phosphorus levels in parts per million.
+- **Nutrient K Sensor (ppm)**: Potassium levels in parts per million.
+- **pH Sensor**: pH levels of the soil or water.
+- **Water Level Sensor (mm)**: Water levels measured in millimeters.
+
+### Datetime Features
+- **sleep_time**: Time the system enters a low-power state.
+- **wake_time**: Time the system resumes operation.
+
+---
+
+## ⚙️ Configuration
+
+The pipeline is highly configurable through YAML files located in the `config/` directory:
+
+### Preprocessing Configuration (`preprocessing_config.yaml`)
+- **Missing Value Handling**: Strategies include mean, median, or mode imputation.
+- **Categorical Encoding**: Options include one-hot encoding, label encoding, and frequency encoding.
+- **Scaling**: Normalize numerical features using StandardScaler, MinMaxScaler, or RobustScaler.
+- **Outlier Handling**: Options include IQR-based filtering or Z-score thresholds.
+- **Feature Engineering**:
+  - **Nutrient Balance Index**: Combines nitrogen, phosphorus, and potassium levels.
+  - **Environmental Stress Index**: Derived from temperature, humidity, light intensity, CO2, and O2 levels.
+  - **Water Quality Score**: Combines pH, EC, and water level measurements.
+
+### Model Configuration (`model_config.yaml`)
+- **Algorithms**: Includes Random Forest, XGBoost, LightGBM, and ElasticNet.
+- **Hyperparameters**: Configurable for grid search or random search.
+- **Adaptive Classifier**: Dynamically selects models based on temperature ranges.
+
+### General Configuration (`config.yaml`)
+- **Data Paths**: Paths for raw, processed, and feature-engineered data.
+- **Logging**: Configurable logging levels and output formats.
+- **Experiment Tracking**: Save metrics, models, and visualizations for analysis.
+
+---
+
+## ⚙️ Installation
 
 ### Prerequisites
 - Python 3.8 or higher
 - pip (Python package installer)
 
 ### Setup
-1. Clone this repository
-```bash
-git clone https://github.com/yourusername/student_performance_ml_pipeline.git
-cd student_performance_ml_pipeline
-```
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/yourusername/student_performance_ml_pipeline.git
+   cd student_performance_ml_pipeline
+   ```
 
-2. Install the required packages
-```bash
-pip install -r requirements.txt
-```
+2. Install the required packages:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## Usage
+---
+
+## 🚀 Usage
 
 ### Running the Pipeline
-To run the entire ML pipeline with default configuration:
-
+To run the entire ML pipeline with the default configuration:
 ```bash
 ./run.sh
 ```
 
-Or you can run it with a custom configuration:
-
+To run it with a custom configuration:
 ```bash
 ./run.sh --config config/custom_config.yaml
 ```
 
-### Pipeline Components
+---
 
-1. **Data Loading**: Loads the raw data from the data source
-2. **Data Cleaning**: Handles missing values, duplicates, and inconsistencies
-3. **Data Preprocessing**: Transforms categorical variables, normalizes numerical features
-4. **Feature Engineering**: Creates new features, selects relevant features
-5. **Model Training**: Trains various ML models with hyperparameter optimization
-6. **Model Evaluation**: Evaluates models using appropriate metrics
-7. **Model Selection**: Selects the best performing model
-8. **Prediction**: Makes predictions on new data
-
-## Customization
-
-### Configuration Files
-The pipeline can be customized through YAML configuration files located in the `config/` directory:
-
-- `config.yaml`: General pipeline configuration
-- `model_config.yaml`: Model-specific configurations
-- `preprocessing_config.yaml`: Data preprocessing configurations
+## 🛠️ Customization
 
 ### Adding New Models
-To add a new model:
-
-1. Update the `model_config.yaml` file with the new model's parameters
-2. The pipeline will automatically include it in the training and evaluation process
+1. Update the `model_config.yaml` file with the new model's parameters.
+2. The pipeline will automatically include it in the training and evaluation process.
 
 ### Feature Engineering
-To customize feature engineering:
+1. Modify the `preprocessing_config.yaml` file to add new transformations.
+2. Implement custom transformations in `src/features/feature_engineering.py`.
 
-1. Modify the `preprocessing_config.yaml` file
-2. Add new feature transformations in `src/features/feature_engineering.py`
+---
 
-## Project Structure
+## 📂 Project Structure
 
 ```
 student_performance_ml_pipeline/
@@ -103,33 +129,67 @@ student_performance_ml_pipeline/
 ├── requirements.txt            # Dependencies
 ├── run.sh                      # Script to run the pipeline
 ├── config/                     # Configuration files
+│   ├── config.yaml             # General pipeline configuration
+│   ├── preprocessing_config.yaml # Preprocessing configuration
+│   └── model_config.yaml       # Model-specific configurations
 ├── data/                       # Data directory
+│   ├── raw/                    # Raw data
+│   ├── processed/              # Processed data
+│   └── features/               # Feature-engineered data
 ├── models/                     # Saved models
 ├── notebooks/                  # Notebooks for exploration
+├── results/                    # Results and visualizations
+├── src/                        # Source code
+│   ├── data_loader.py          # Module for loading data
+│   ├── data_cleaner.py         # Module for cleaning data
+│   ├── data_preprocessor.py    # Module for preprocessing data
+│   ├── feature_engineering.py  # Module for feature engineering
+│   └── model_trainer.py        # Module for training models
 ├── tests/                      # Unit tests
-└── src/                        # Source code
+└── pipeline.log                # Log file
 ```
 
-## Testing
+---
+
+## ✅ Testing
 
 Run the tests to ensure all components are working correctly:
-
 ```bash
 python -m pytest tests/
 ```
 
-## Results
+---
 
-The pipeline outputs evaluation metrics and predictions in the `results/` directory. Visualizations are also generated to help interpret the results.
+## 📈 Results
 
-## Contributing
+The pipeline outputs evaluation metrics and predictions in the `results/` directory. Key metrics include:
+- **RMSE**: Root Mean Squared Error
+- **MAE**: Mean Absolute Error
+- **R²**: Coefficient of Determination
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -m 'Add some feature'`)
-4. Push to the branch (`git push origin feature/your-feature`)
-5. Open a Pull Request
+Visualizations are also generated to help interpret the results.
 
-## License
+---
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## 🤝 Contributing
+
+1. Fork the repository.
+2. Create a feature branch:
+   ```bash
+   git checkout -b feature/your-feature
+   ```
+3. Commit your changes:
+   ```bash
+   git commit -m 'Add some feature'
+   ```
+4. Push to the branch:
+   ```bash
+   git push origin feature/your-feature
+   ```
+5. Open a Pull Request.
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License - see the `LICENSE` file for details.

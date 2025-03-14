@@ -3,6 +3,7 @@ from pathlib import Path
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "config/config.yaml"
 PREPROCESSING_CONFIG_PATH = Path(__file__).resolve().parents[1] / "config/preprocessing_config.yaml"
+MODEL_CONFIG_PATH = Path(__file__).resolve().parents[1] / "config/model_config.yaml"
 
 def load_config():
     """Load the main configuration file (config.yaml)."""
@@ -15,6 +16,11 @@ def load_preprocessing_config():
     config = load_config()
     preprocessing_path = CONFIG_PATH.parent.parent / config['pipeline']['preprocessing_config']
     with open(preprocessing_path, "r") as file:
+        return yaml.safe_load(file)
+
+def load_model_config():
+    """Load parameters from the main configuration file (model_config.yaml)."""
+    with open(MODEL_CONFIG_PATH, "r") as file:
         return yaml.safe_load(file)
 
 def load_raw_data():

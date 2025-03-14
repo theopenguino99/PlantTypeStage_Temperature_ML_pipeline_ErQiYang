@@ -78,7 +78,7 @@ class DataPreprocessor:
         """Encode categorical variables."""
         problem_type = self.config['data']['problem_type']
         if problem_type == 'regression':
-            categorical_cols_not2encode = None
+            categorical_cols_not2encode = []
         elif problem_type == 'classification':
             categorical_cols_not2encode = self.config['data']['target_cat']
         categorical_cols = self.preprocessing_config['columns']['categorical']

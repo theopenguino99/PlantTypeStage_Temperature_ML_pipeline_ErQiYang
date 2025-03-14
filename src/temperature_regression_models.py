@@ -13,14 +13,15 @@ from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 import joblib
 import os
 import logging
+from config_loader import load_model_config
+from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
 
 class TemperatureRegressionModel:
     """Base class for temperature regression models in the agricultural pipeline."""
     
-    def __init__(self, model_name, model_params=None, scaler=None):
+    def __init__(self, model_name, model_params=None):
         self.model_name = model_name
         self.model_params = model_params or {}
-        self.scaler = scaler
         self.model = None
         self.logger = logging.getLogger(__name__)
     
@@ -38,18 +39,18 @@ class TemperatureRegressionModel:
             model = MLPRegressor(**self.model_params)
         elif self.model_name == "svr":
             model = SVR(**self.model_params)
+        elif self.model_name == "linear_regression":
+            model = LinearRegression(**self.model_params)
+        elif self.model_name == "ridge_regression":
+            model = Ridge(**self.model_params)
+        elif self.model_name == "lasso_regression":
+            model = Lasso(**self.model_params)
+        elif self.model_name == "elastic_net":
+            model = ElasticNet(**self.model_params)
         else:
             raise ValueError(f"Unknown model type: {self.model_name}")
         
-        # Create pipeline with scaling if needed
-        if self.scaler is not None:
-            self.model = Pipeline([
-                ('scaler', self.scaler),
-                ('regressor', model)
-            ])
-        else:
-            self.model = model
-        
+        self.model = model
         return self.model
     
     def train(self, X_train, y_train):
@@ -99,6 +100,41 @@ class TemperatureRegressionModel:
         self.model = joblib.load(filepath)
         self.logger.info(f"Model loaded from {filepath}")
         return self
+    
+    def hyperparameter_tuning(self, X, y, param_grid=None, cv=5, n_jobs=-1, method='grid'):
+        """Perform hyperparameter tuning for the model."""
+        if param_grid is None:
+            # Define default param grid based on model type
+            if self.model_name in load_model_config['models']:
+                param_grid = load_model_config['models'][self.model_name]['hyperparameter_tuning']['param_grid']
+            else:
+                self.logger.warning(f"No default param grid for {self.model_name}. Using empty grid.")
+                param_grid = {}
+        
+        # Dynamically create the model based on self.model_name
+        model = self.build_model()
+        
+        if method == 'grid':
+            search = GridSearchCV(model, param_grid, cv=cv, n_jobs=n_jobs, 
+                                scoring='neg_mean_squared_error')
+        else:  # random search
+            search = RandomizedSearchCV(model, param_grid, cv=cv, n_jobs=n_jobs, 
+                                       scoring='neg_mean_squared_error', n_iter=20)
+        
+        self.logger.info(f"Performing {method} search for hyperparameter tuning")
+        search.fit(X, y)
+        
+        # Update model with best parameters
+        self.logger.info(f"Best parameters: {search.best_params_}")
+        self.model_params.update(search.best_params_)
+        
+        # Create the model with best parameters
+        self.model = self.build_model()
+        
+        # Train the model with the best parameters
+        self.model.fit(X, y)
+        
+        return self, search.best_params_
 
 
 class AdaptiveTemperatureRegressor(BaseEstimator, RegressorMixin):

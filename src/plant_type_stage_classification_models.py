@@ -4,7 +4,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, RidgeClassifier, Lasso, ElasticNet
 from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
@@ -15,7 +15,7 @@ import joblib
 import os
 from loguru import logger
 from collections import Counter
-from model_config_loader import load_model_config
+from config_loader import load_model_config
 
 class PlantTypeStageClassifier:
     """Base class for plant type-stage classification models in the agricultural pipeline."""
@@ -26,7 +26,7 @@ class PlantTypeStageClassifier:
         self.scaler = scaler
         self.model = None
         self.label_encoder = LabelEncoder()
-        self.metric = load_model_config('evaluation_classification', 'primary_metric')
+        self.metric = load_model_config['evaluation_classification']['primary_metric']
     
     def build_model(self):
         """Build the model based on model_name."""
@@ -44,6 +44,12 @@ class PlantTypeStageClassifier:
             model = SVC(**self.model_params, probability=True)
         elif self.model_name == "logistic_regression":
             model = LogisticRegression(**self.model_params)
+        elif self.model_name == "ridge_regression":
+            model = RidgeClassifier(**self.model_params)
+        elif self.model_name == "lasso_regression":
+            model = Lasso(**self.model_params)
+        elif self.model_name == "elastic_net":
+            model = ElasticNet(**self.model_params)
         else:
             raise ValueError(f"Unknown model type: {self.model_name}")
         
@@ -151,12 +157,8 @@ class PlantTypeStageClassifier:
         
         if param_grid is None:
             # Define default param grid based on model type
-            if self.model_name == "random_forest":
-                param_grid = load_model_config('models', 'random_forest', 'hyperparameter_tuning')['param_grid']
-            elif self.model_name == "xgboost":
-                param_grid = load_model_config('models', 'xgboost', 'hyperparameter_tuning')['param_grid']
-            elif self.model_name == "lightgbm":
-                param_grid = load_model_config('models', 'lightgbm', 'hyperparameter_tuning')['param_grid']
+            if self.model_name in load_model_config['models']:
+                param_grid = load_model_config['models'][self.model_name]['hyperparameter_tuning']['param_grid']
             else:
                 logger.warning(f"No default param grid for {self.model_name}. Using empty grid.")
                 param_grid = {}
@@ -209,10 +211,10 @@ class EnsemblePlantClassifier(BaseEstimator, ClassifierMixin):
     """
     
     def __init__(self, base_models=None, voting='soft', weights=None):
-        random_state = load_model_config('common', 'random_state')
-        RFC_n_edtimators = load_model_config('models', 'random_forest', 'params')['n_estimators']
-        GBC_n_estimators = load_model_config('models', 'gradient_boosting', 'params')['n_estimators']
-        XGB_n_estimators = load_model_config('models', 'xgboost', 'params')['n_estimators']
+        random_state = load_model_config()['common']['random_state']
+        RFC_n_edtimators = load_model_config()['models']['random_forest']['params']['n_estimators']
+        GBC_n_estimators = load_model_config()['models']['gradient_boosting']['params']['n_estimators']
+        XGB_n_estimators = load_model_config()['models']['xgboost']['params']['n_estimators']
         
         self.base_models = base_models or [
             RandomForestClassifier(n_estimators=RFC_n_edtimators, random_state=random_state),
@@ -299,7 +301,7 @@ class AdaptivePlantClassifier(BaseEstimator, ClassifierMixin):
         """
         Initialize the adaptive classifier with specialized models for different conditions.
         """
-        config = load_model_config('models', 'adaptive_classifier')
+        config = load_model_config()['models']['adaptive_classifier']
         self.models_config = config['models_config']
         self.default_model_config = config['default_model']
         
