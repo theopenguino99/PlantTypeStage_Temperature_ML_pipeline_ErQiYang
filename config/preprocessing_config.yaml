@@ -26,7 +26,7 @@ columns:
     - wake_time
   
   drop_columns:
-    none # Columns to drop from the dataset manually
+    none # Columns to drop from the dataset manually e.g. none
 
 # Data cleaning settings
 cleaning:

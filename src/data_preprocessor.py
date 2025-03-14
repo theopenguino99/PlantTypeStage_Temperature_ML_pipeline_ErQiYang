@@ -76,11 +76,17 @@ class DataPreprocessor:
     
     def _encode_categorical_columns(self, df):
         """Encode categorical variables."""
-        categorical_cols_2encode = self.preprocessing_config['columns']['categorical']
-        categorical_cols_not2encode = self.config['data']['target_cat']
-        categorical_cols = [col for col in categorical_cols_2encode if col in df.columns and col not in categorical_cols_not2encode]
+        problem_type = self.config['data']['problem_type']
+        if problem_type == 'regression':
+            categorical_cols_not2encode = None
+        elif problem_type == 'classification':
+            categorical_cols_not2encode = self.config['data']['target_cat']
+        categorical_cols = self.preprocessing_config['columns']['categorical']
         
-        if not categorical_cols:
+        categorical_cols_2encode = [col for col in categorical_cols if col in df.columns and col not in categorical_cols_not2encode]
+        print('Columns I encoded are ', categorical_cols_2encode)
+        
+        if not categorical_cols_2encode:
             return df
             
         encoding_method = self.preprocessing_config['preprocessing']['categorical_encoding']['method']
@@ -89,12 +95,12 @@ class DataPreprocessor:
         logger.info(f"Encoding categorical variables using {encoding_method} encoding")
         
         if encoding_method == 'one-hot':
-            encoder = OneHotEncoder(cols=categorical_cols, handle_unknown=handle_unknown)
+            encoder = OneHotEncoder(cols=categorical_cols_2encode, handle_unknown=handle_unknown)
             df = encoder.fit_transform(df)
             self.encoders['categorical'] = encoder
             
         elif encoding_method == 'label':
-            for col in categorical_cols:
+            for col in categorical_cols_2encode:
                 le = LabelEncoder()
                 df[col] = le.fit_transform(df[col].astype(str))
                 self.encoders[col] = le
@@ -105,7 +111,7 @@ class DataPreprocessor:
             pass
             
         elif encoding_method == 'frequency':
-            for col in categorical_cols:
+            for col in categorical_cols_2encode:
                 freq_map = df[col].value_counts(normalize=True).to_dict()
                 df[col] = df[col].map(freq_map)
                 self.encoders[col] = freq_map

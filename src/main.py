@@ -67,30 +67,30 @@ def main():
         
         print('Preprocessing done')
 
-        # Train models
-        logger.info("Training models")
-        model_trainer = ModelTrainer(config)
-        trained_models = model_trainer.train_models(X_train, y_train, X_val, y_val)
+        # # Train models
+        # logger.info("Training models")
+        # model_trainer = ModelTrainer(config)
+        # trained_models = model_trainer.train_models(X_train, y_train, X_val, y_val)
         
-        # Evaluate models
-        logger.info("Evaluating models")
-        model_evaluator = ModelEvaluator(config)
-        evaluation_results, best_model = model_evaluator.evaluate_models(
-            trained_models, X_test, y_test
-        )
+        # # Evaluate models
+        # logger.info("Evaluating models")
+        # model_evaluator = ModelEvaluator(config)
+        # evaluation_results, best_model = model_evaluator.evaluate_models(
+        #     trained_models, X_test, y_test
+        # )
         
-        # Generate visualizations
-        logger.info("Generating visualizations")
-        visualizer = Visualizer(config)
-        visualizer.create_visualizations(data, cleaned_data, feature_data, evaluation_results, best_model)
+        # # Generate visualizations
+        # logger.info("Generating visualizations")
+        # visualizer = Visualizer(config)
+        # visualizer.create_visualizations(data, cleaned_data, feature_data, evaluation_results, best_model)
         
-        # Save best model
-        logger.info("Saving best model")
-        model_path = os.path.join(config['paths']['models_dir'], 'best_model.joblib')
-        model_trainer.save_model(best_model, model_path)
+        # # Save best model
+        # logger.info("Saving best model")
+        # model_path = os.path.join(config['paths']['models_dir'], 'best_model.joblib')
+        # model_trainer.save_model(best_model, model_path)
         
-        logger.info("ML pipeline completed successfully")
-        return 0
+        # logger.info("ML pipeline completed successfully")
+        # return 0
         
     except Exception as e:
         logger.error(f"Error in ML pipeline: {str(e)}", exc_info=True)
