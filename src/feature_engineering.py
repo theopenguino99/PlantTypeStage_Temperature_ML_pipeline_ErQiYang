@@ -80,6 +80,7 @@ class FeatureEngineer:
         return df
 
 # # Test the feature engineering module
+# pd.set_option('display.max_columns', None)
 # if __name__ == "__main__":
 #     from data_loader import DataLoader
 #     from data_cleaner import DataCleaner
@@ -89,7 +90,7 @@ class FeatureEngineer:
 #     df = data_loader.load_data()
 #     cleaner = DataCleaner()
 #     df = cleaner.clean_data(df)
-#     feature_selector = FeatureSelector()
+#     feature_selector = FeatureSelector('regression')
 #     df = feature_selector.select_features(df)
 #     data_engineer = FeatureEngineer()
 #     df_features = data_engineer.engineer_features(df)

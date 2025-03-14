@@ -110,5 +110,9 @@ class DataLoader:
         logger.info(f"Data saved successfully to {filepath}")
 
 # # To test module
+
+# # Set pandas option to display all columns
+# pd.set_option('display.max_columns', None)
+
 # x = DataLoader()
 # print(x.load_data().head())

@@ -15,10 +15,9 @@ data:
   validation_size: 0.25  # percentage of training data
   random_state: 42
   target_cat: 
-    'Plant Stage'
+    'Plant Type-Stage'
   target_num:
     'Temperature Sensor (°C)'
-  problem_type: "regression"  # Options: regression, classification
 
 
 # Pipeline settings

@@ -7,6 +7,7 @@ columns:
     - Previous Cycle Plant Type
     - Plant Type
     - Plant Stage
+    - Plant Type-Stage
   
   numerical:
     - Temperature Sensor (°C)
@@ -121,6 +122,8 @@ feature_engineering:
       - EC Sensor (dS/m)
       - Water Level Sensor (mm)
 
+  delete_Type_Stage_AfterCombination: # Delete the columns used to create the new feature "Plant Type-Stage"
+    enabled: true
 
 # Feature selection
 feature_selection:

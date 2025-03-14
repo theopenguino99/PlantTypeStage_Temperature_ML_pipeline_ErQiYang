@@ -15,7 +15,7 @@ from config_loader import *
 class FeatureSelector:
     """Class to select features for model training."""
     
-    def __init__(self):
+    def __init__(self, problem_type):
         """
         Initialize the FeatureSelector.
         
@@ -25,13 +25,13 @@ class FeatureSelector:
         self.config = load_config()
         self.selected_features = None
         self.preprocessing_config = load_preprocessing_config()
-        problem_type = self.config['data']['problem_type']
-        if problem_type == 'regression':
+        self.problem_type = problem_type
+        if self.problem_type == 'regression':
             target_column = self.config['data']['target_num']
-        elif problem_type == 'classification':
+        elif self.problem_type == 'classification':
             target_column = self.config['data']['target_cat']
         else:
-            raise ValueError(f"Unsupported problem type '{problem_type}'")
+            raise ValueError(f"Unsupported problem type '{self.problem_type}'")
         self.target_column = target_column
     
     
@@ -49,6 +49,17 @@ class FeatureSelector:
         
         # Copy dataframe to avoid modifying the original
         df_select = df.copy()
+
+        logger.info("Creating Plant Type-Stage feature")
+
+        # Create new column that concatinates features "Plant Type" and "Plant Stage" to create "Plant Type-Stage"
+        df_select['Plant Type-Stage'] = df_select['Plant Type'] + '-' + df_select['Plant Stage']
+
+        logger.info('Deleting original columns Plant Type and Plant Stage if enabled in configuration')
+        
+        # Delete original columns if enabled in configuration
+        if self.preprocessing_config['feature_engineering']['delete_Type_Stage_AfterCombination']['enabled']:
+            df_select.drop(['Plant Type', 'Plant Stage'], axis=1, inplace=True)
         
         # Get the feature selection method from config
         method = self.preprocessing_config['feature_selection']['method'].lower()
@@ -170,6 +181,7 @@ class FeatureSelector:
         return X_train, X_val, X_test, y_train, y_val, y_test
 
 # # Test module
+# pd.set_option('display.max_columns', None)
 # if __name__ == '__main__':
 #     from data_loader import DataLoader
 #     from data_cleaner import DataCleaner
@@ -180,6 +192,9 @@ class FeatureSelector:
 #     data_cleaner = DataCleaner()
 #     data_cleaned = data_cleaner.clean_data(data)
 #     # Feature selection
-#     feature_selector = FeatureSelector()
-#     result = feature_selector.select_features(data_cleaned)
-#     print(  result.head()  )
+#     feature_selector_regression = FeatureSelector('regression')
+#     feature_selector_classification = FeatureSelector('classification')
+#     result = feature_selector_regression.select_features(data_cleaned)
+#     result_classification = feature_selector_classification.select_features(data_cleaned)
+#     print(result_classification.head(), '\n\n\n\n\n\n\n')
+#     print(result.head())

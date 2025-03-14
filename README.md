@@ -1,6 +1,7 @@
 # Student Performance Prediction ML Pipeline
 
-This machine learning pipeline predicts student performance (`final_score`) using features derived from student demographics, behaviors, and academic background. The pipeline is modular, configurable, and designed for scalability.
+This machine learning pipeline predicts the temperature conditions ("Temperature Sensor (°C)") within the farm's closed environment, ensuring optimal plant growth. Additionally, it contains models to categorise the combined ("Plant Type-Stage") based on sensor data, aiding in
+strategic planning and resource allocation.
 
 ---
 
@@ -83,8 +84,8 @@ The pipeline is highly configurable through YAML files located in the `config/` 
 ### Setup
 1. Clone this repository:
    ```bash
-   git clone https://github.com/yourusername/student_performance_ml_pipeline.git
-   cd student_performance_ml_pipeline
+   git clone https://github.com/theopenguino99/aiip5-Er-Qi-Yang-227J.git
+   cd aiip5-Er-Qi-Yang-227J
    ```
 
 2. Install the required packages:
@@ -125,28 +126,32 @@ To run it with a custom configuration:
 
 ```
 student_performance_ml_pipeline/
-├── README.md                   # Project documentation
-├── requirements.txt            # Dependencies
-├── run.sh                      # Script to run the pipeline
-├── config/                     # Configuration files
-│   ├── config.yaml             # General pipeline configuration
-│   ├── preprocessing_config.yaml # Preprocessing configuration
-│   └── model_config.yaml       # Model-specific configurations
-├── data/                       # Data directory
-│   ├── raw/                    # Raw data
-│   ├── processed/              # Processed data
-│   └── features/               # Feature-engineered data
-├── models/                     # Saved models
-├── notebooks/                  # Notebooks for exploration
-├── results/                    # Results and visualizations
-├── src/                        # Source code
-│   ├── data_loader.py          # Module for loading data
-│   ├── data_cleaner.py         # Module for cleaning data
-│   ├── data_preprocessor.py    # Module for preprocessing data
-│   ├── feature_engineering.py  # Module for feature engineering
-│   └── model_trainer.py        # Module for training models
-├── tests/                      # Unit tests
-└── pipeline.log                # Log file
+├── README.md                               # Project documentation
+├── requirements.txt                        # Dependencies
+├── run.sh                                  # Script to run the pipeline
+├── eda.ipynb                               # Notebook for Exploratory Data Analysis
+├── config/                                 # Configuration files
+│   ├── config.yaml                         # General pipeline configuration
+│   ├── preprocessing_config.yaml           # Preprocessing configuration
+│   └── model_config.yaml                   # Model-specific configurations
+├── data/                                   # Data directory
+│   ├── agri.db                             # Raw data
+│   └── processed/                          # Processed data
+├── models/                                 # Saved models
+├── results/                                # Results and visualizations
+├── src/                                    # Source code
+│   ├── config_loader.py                    # Module for loading configurations from .yaml files
+│   ├── data_loader.py                      # Module for loading data
+│   ├── data_cleaner.py                     # Module for cleaning data
+│   ├── data_preprocessor.py                # Module for preprocessing data
+│   ├── feature_engineering.py              # Module for feature engineering
+│   ├── feature_selection.py                # Module for feature selection (automatic)
+│   ├── model_trainer.py                    # Module for training chosen models
+│   ├── model_evaluator.py                  # Module for evaluating performance of models
+│   ├── temperature_regression_models.py    # Module for feature engineering
+│   ├── plant_type_stage_classification.py  # Module for feature engineering
+│   └── main.py                             # Main module to execute
+└── pipeline.log                            # Log file
 ```
 
 ---
