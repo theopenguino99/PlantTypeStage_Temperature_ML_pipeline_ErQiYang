@@ -5,8 +5,8 @@ import os
 import joblib
 from sklearn.model_selection import train_test_split, cross_val_score
 from datetime import datetime
-from .model_factory import ModelFactory
-from .model_evaluator import ModelEvaluator
+from model_factory import ModelFactory
+from model_evaluator import ModelEvaluator
 
 class ModelTrainer:
     """

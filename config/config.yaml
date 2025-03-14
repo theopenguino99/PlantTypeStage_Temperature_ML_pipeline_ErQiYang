@@ -18,7 +18,7 @@ data:
     'Plant Stage'
   target_cat:
     'Temperature Sensor (°C)'
-  problem_type: "regression"  # Options: regression, classification
+  problem_type: "classification"  # Options: regression, classification
 
 
 # Pipeline settings

@@ -7,10 +7,6 @@ import argparse
 import os
 import sys
 import yaml
-from pathlib import Path
-
-# Add the src directory to sys.path
-
 from loguru import logger
 from config_loader import load_config
 from data_loader import DataLoader
@@ -37,7 +33,7 @@ def main():
     try:
         # Load configuration
         logger.info(f"Loading configuration from {args.config}")
-        config = load_config(args.config)
+        config = load_config()
         
         # Create required directories
         for path in [config['paths']['data_dir'], config['paths']['models_dir'], 
@@ -46,29 +42,31 @@ def main():
         
         # Load data
         logger.info("Loading data")
-        data_loader = DataLoader(config)
+        data_loader = DataLoader()
         data = data_loader.load_data()
         
         # Clean data
         logger.info("Cleaning data")
-        data_cleaner = DataCleaner(config)
+        data_cleaner = DataCleaner()
         cleaned_data = data_cleaner.clean_data(data)
         
         # Feature selection
         logger.info("Selecting features")
-        feature_selector = FeatureSelector(config)
-        X_train, X_val, X_test, y_train, y_val, y_test = feature_selector.select_features(feature_data)
+        feature_selector = FeatureSelector()
+        data_selected = feature_selector.select_features(cleaned_data)
         
         # Feature engineering
         logger.info("Engineering features")
-        feature_engineer = FeatureEngineer(config)
-        feature_data = feature_engineer.engineer_features(preprocessed_data)
+        feature_engineer = FeatureEngineer()
+        data_engineered = feature_engineer.engineer_features(data_selected)
         
         # Preprocess data
         logger.info("Preprocessing data")
-        preprocessor = DataPreprocessor(config)
-        preprocessed_data = preprocessor.preprocess(cleaned_data)
+        preprocessor = DataPreprocessor()
+        preprocessed_data = preprocessor.preprocess(data_engineered)
         
+        print('Preprocessing done')
+
         # Train models
         logger.info("Training models")
         model_trainer = ModelTrainer(config)
