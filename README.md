@@ -137,8 +137,8 @@ student_performance_ml_pipeline/
 ├── data/                                   # Data directory
 │   ├── agri.db                             # Raw data
 │   └── processed/                          # Processed data
-├── models/                                 # Saved models
-├── results/                                # Results and visualizations
+├── models/                                 # Saved models (in .pkl format)
+├── results/                                # Results and visualizations (in both .pkl and .csv readable format)
 ├── src/                                    # Source code
 │   ├── config_loader.py                    # Module for loading configurations from .yaml files
 │   ├── data_loader.py                      # Module for loading data
@@ -148,8 +148,8 @@ student_performance_ml_pipeline/
 │   ├── feature_selection.py                # Module for feature selection (automatic)
 │   ├── model_trainer.py                    # Module for training chosen models
 │   ├── model_evaluator.py                  # Module for evaluating performance of models
-│   ├── temperature_regression_models.py    # Module for feature engineering
-│   ├── plant_type_stage_classification.py  # Module for feature engineering
+│   ├── temperature_regression_models.py    # Module for regression models
+│   ├── plant_type_stage_classification.py  # Module for classification models
 │   └── main.py                             # Main module to execute
 └── pipeline.log                            # Log file
 ```
