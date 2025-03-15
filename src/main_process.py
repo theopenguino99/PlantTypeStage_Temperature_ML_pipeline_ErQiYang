@@ -33,19 +33,5 @@ class DataInput:
         data_engineered = FeatureEngineer().engineer_features(data_selected)
         logger.info("Preprocessing data")
         preprocessed_data = DataPreprocessor(self.problem_type).preprocess(data_engineered)
-        
+        logger.info(f"Data for {self.problem_type} loaded successfully with shape: {preprocessed_data.shape}")
         return preprocessed_data
-    
-# # Test the module
-# import pandas as pd
-# pd.set_option('display.max_columns', None)
-# if __name__ == "__main__":
-#     # Load data for regression problem
-#     logger.info("Loading data for regression problem")
-#     regression_data = DataInput('regression').process_data()
-#     logger.info(f"Regression data: {regression_data.head()}")
-    
-#     # Load data for classification problem
-#     logger.info("Loading data for classification problem")
-#     classification_data = DataInput('classification').process_data()
-#     logger.info(f"Classification data: {classification_data.head()}")

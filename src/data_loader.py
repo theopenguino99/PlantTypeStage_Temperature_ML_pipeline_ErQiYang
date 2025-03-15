@@ -5,8 +5,8 @@ Module for loading data from various sources.
 import os
 import pandas as pd
 import sqlite3
-from pathlib import Path
 from loguru import logger
+from pathlib import Path
 from config_loader import *
 
 
@@ -31,9 +31,6 @@ class DataLoader:
         Returns:
             pandas.DataFrame: Loaded data
         """
-        logger.info(f"Loading data from {self.raw_data_path}")
-        print(f"Loading data from {self.raw_data_path}")
-        
         if not os.path.exists(self.raw_data_path):
             logger.error(f"Data file not found: {self.raw_data_path}")
             raise FileNotFoundError(f"Data file not found: {self.raw_data_path}")
@@ -54,9 +51,6 @@ class DataLoader:
         else:
             logger.error(f"Unsupported file format: {file_extension}")
             raise ValueError(f"Unsupported file format: {file_extension}")
-        
-        logger.info(f"Data loaded successfully with shape: {df.shape}")
-        logger.debug(f"Columns in data: {list(df.columns)}")
         
         return df
     
@@ -108,11 +102,3 @@ class DataLoader:
             raise ValueError(f"Unsupported file format for saving: {file_extension}")
         
         logger.info(f"Data saved successfully to {filepath}")
-
-# # To test module
-
-# # Set pandas option to display all columns
-# pd.set_option('display.max_columns', None)
-
-# x = DataLoader()
-# print(x.load_data().head())

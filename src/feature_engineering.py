@@ -1,11 +1,7 @@
 """
 Module for feature engineering.
 """
-
-import pandas as pd
-import numpy as np
-from loguru import logger
-from config_loader import *
+from config_loader import load_config, load_preprocessing_config
 
 class FeatureEngineer:
     """Class to engineer new features from existing data."""
@@ -78,20 +74,3 @@ class FeatureEngineer:
                 df[required_cols[2]]
             ) / 3
         return df
-
-# # Test the feature engineering module
-# pd.set_option('display.max_columns', None)
-# if __name__ == "__main__":
-#     from data_loader import DataLoader
-#     from data_cleaner import DataCleaner
-#     from feature_selection import FeatureSelector
-
-#     data_loader = DataLoader()
-#     df = data_loader.load_data()
-#     cleaner = DataCleaner()
-#     df = cleaner.clean_data(df)
-#     feature_selector = FeatureSelector('regression')
-#     df = feature_selector.select_features(df)
-#     data_engineer = FeatureEngineer()
-#     df_features = data_engineer.engineer_features(df)
-#     print(df_features.head())

@@ -11,6 +11,7 @@ from config_loader import load_config
 from main_process import DataInput
 from model_trainer import ModelTrainer
 import pandas as pd
+from pandas import DataFrame
 
 def parse_arguments():
     """Parse command line arguments."""
@@ -26,45 +27,45 @@ def main():
     
     try:
         # Load configuration
-        logger.info(f"Loading configuration from {args.config}")
+        logger.opt(colors=True).info(f"<yellow>Loading configuration from {args.config}</yellow>")
         config = load_config()
         if not isinstance(config, dict):
             raise TypeError("load_config did not return a dictionary. Check its implementation.")
-
-        # Create required directories
-        for path in [config['paths']['data_dir'], config['paths']['models_dir'], config['paths']['results_dir']]:
-            os.makedirs(path, exist_ok=True)
         
         # Load preprocessed data from main_process.py
-        logger.info("Loading preprocessed data")
-        input_regression_data = DataInput('regression')
-        input_classification_data = DataInput('classification')
+        logger.opt(colors=True).info("<yellow>Load->Clean->Select->Engineer->Preprocess</yellow>")
+        input_regression_data = DataInput('regression').process_data()
+        input_classification_data = DataInput('classification').process_data()
 
         # Train models
-        logger.info("Training models")
+        logger.opt(colors=True).info("<yellow>Training models</yellow>")
         model_trainer = ModelTrainer()
         
         # Train temperature models (REGRESSION PROBLEM)
-        temp_target_column = config['data']['target_num']
         temp_results, best_temp_model = model_trainer.train_temperature_models(input_regression_data)
-        logger.info(f"Best temperature model: {best_temp_model}")
+        logger.log("INFO", f"Best temperature model: {best_temp_model}", color="<yellow>")
         
         # Train plant type-stage models (CLASSIFICATION PROBLEM)
-        plant_target_column = config['data']['target_cat']
-        plant_results, best_plant_model = model_trainer.train_plant_type_stage_models(input_classification_data, target_column=plant_target_column)
+        plant_results, best_plant_model = model_trainer.train_plant_type_stage_models(input_classification_data)
         logger.info(f"Best plant type-stage model: {best_plant_model}")
         
         # Save results
+        logger.opt(colors=True).info("<yellow>Saving results of Regression and Clasification problem</yellow>")
         results_dir = config['paths']['results_dir']
-        os.makedirs(results_dir, exist_ok=True)
-        temp_results_path = os.path.join(results_dir, "temperature_results.pkl")
-        plant_results_path = os.path.join(results_dir, "plant_results.pkl")
         
-        pd.to_pickle(temp_results, temp_results_path)
-        pd.to_pickle(plant_results, plant_results_path)
-        logger.info(f"Results saved to {results_dir}")
+        # Convert results to DataFrames to save to a readable CSV format
+        temp_results_df = DataFrame(temp_results)
+        plant_results_df = DataFrame(plant_results)
+        # Save results in a readable format (e.g., CSV)
+        temp_results_df.to_csv(os.path.join(results_dir, "temperature_regression_results.csv"), index=False)
+        plant_results_df.to_csv(os.path.join(results_dir, "plant_results.csv"), index=False)
+        # Optionally, save as pickle for further processing
+        pd.to_pickle(temp_results, os.path.join(results_dir, "temperature_regression_results.pkl"))
+        pd.to_pickle(plant_results, os.path.join(results_dir, "plant_results.pkl"))
         
-        logger.info("ML pipeline completed successfully")
+        logger.info(f"Results saved to {results_dir} in both CSV and pickle formats")
+        
+        logger.opt(colors = True).info("<green>ML pipeline completed successfully</green>")
         return 0
         
     except Exception as e:

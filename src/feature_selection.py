@@ -2,14 +2,11 @@
 Module for feature selection.
 """
 
-import yaml
 from pathlib import Path
-import os
 import pandas as pd
 import numpy as np
 from sklearn.feature_selection import VarianceThreshold, SelectKBest, f_regression
 from sklearn.model_selection import train_test_split
-from loguru import logger
 from config_loader import *
 
 class FeatureSelector:
@@ -45,17 +42,13 @@ class FeatureSelector:
         Returns:
             tuple: (X_train, X_val, X_test, y_train, y_val, y_test)
         """
-        logger.info("Starting feature selection")
+
         
         # Copy dataframe to avoid modifying the original
         df_select = df.copy()
 
-        logger.info("Creating Plant Type-Stage feature")
-
         # Create new column that concatinates features "Plant Type" and "Plant Stage" to create "Plant Type-Stage"
         df_select['Plant Type-Stage'] = df_select['Plant Type'] + '-' + df_select['Plant Stage']
-
-        logger.info('Deleting original columns Plant Type and Plant Stage if enabled in configuration')
         
         # Delete original columns if enabled in configuration
         if self.preprocessing_config['feature_engineering']['delete_Type_Stage_AfterCombination']['enabled']:
@@ -66,7 +59,6 @@ class FeatureSelector:
         
         # Apply feature selection if specified
         if method != 'none':
-            logger.info(f"Using {method} method for feature selection")
             
             # Extract target variable before feature selection
             X = df_select.drop(columns=[self.target_column])
@@ -97,7 +89,6 @@ class FeatureSelector:
         selected_mask = selector.get_support()
         selected_features = X.columns[selected_mask].tolist()
         
-        logger.info(f"Selected {len(selected_features)} features using variance threshold")
         self.selected_features = selected_features
         
         return X[selected_features]
@@ -116,7 +107,6 @@ class FeatureSelector:
         if self.target_column in selected_features:
             selected_features.remove(self.target_column)
         
-        logger.info(f"Selected {len(selected_features)} features using correlation threshold")
         self.selected_features = selected_features
         
         return X[selected_features]
@@ -147,15 +137,13 @@ class FeatureSelector:
         selected_indices = indices[:n_features]
         selected_features = X.columns[selected_indices].tolist()
         
-        logger.info(f"Selected {len(selected_features)} features using feature importance")
         self.selected_features = selected_features
         
         return X[selected_features]
     
     def _split_data(self, df):
         """Split data into train, validation, and test sets."""
-        logger.info("Splitting data into train, validation, and test sets")
-        
+
         # Extract target variable
         target_column = self.target_column
         X = df.drop(columns=[target_column])
@@ -176,25 +164,4 @@ class FeatureSelector:
             X_train_val, y_train_val, test_size=val_size, random_state=random_state
         )
         
-        logger.info(f"Data split completed. Train: {X_train.shape}, Validation: {X_val.shape}, Test: {X_test.shape}")
-        
         return X_train, X_val, X_test, y_train, y_val, y_test
-
-# # Test module
-# pd.set_option('display.max_columns', None)
-# if __name__ == '__main__':
-#     from data_loader import DataLoader
-#     from data_cleaner import DataCleaner
-#     # Load data
-#     data_loader = DataLoader()
-#     data = data_loader.load_data()
-#     # Clean data
-#     data_cleaner = DataCleaner()
-#     data_cleaned = data_cleaner.clean_data(data)
-#     # Feature selection
-#     feature_selector_regression = FeatureSelector('regression')
-#     feature_selector_classification = FeatureSelector('classification')
-#     result = feature_selector_regression.select_features(data_cleaned)
-#     result_classification = feature_selector_classification.select_features(data_cleaned)
-#     print(result_classification.head(), '\n\n\n\n\n\n\n')
-#     print(result.head())

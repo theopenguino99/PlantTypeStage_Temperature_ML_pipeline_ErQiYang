@@ -17,80 +17,17 @@ from loguru import logger
 from collections import Counter
 from config_loader import load_model_config
 
-class PlantTypeStageClassifier:
-    """Base class for plant type-stage classification models in the agricultural pipeline."""
+class BaseTypeStageClassifier:
+    """Base class for shared functionality in plant type-stage classification models."""
     
-    def __init__(self, model_name, model_params=None, scaler=None):
+    def __init__(self, model_name=None, model_params=None, scaler=None):
         self.model_name = model_name
         self.model_params = model_params or {}
         self.scaler = scaler
         self.model = None
         self.label_encoder = LabelEncoder()
-        self.metric = load_model_config['evaluation_classification']['primary_metric']
-    
-    def build_model(self):
-        """Build the model based on model_name."""
-        if self.model_name == "random_forest":
-            model = RandomForestClassifier(**self.model_params)
-        elif self.model_name == "gradient_boosting":
-            model = GradientBoostingClassifier(**self.model_params)
-        elif self.model_name == "xgboost":
-            model = XGBClassifier(**self.model_params)
-        elif self.model_name == "lightgbm":
-            model = LGBMClassifier(**self.model_params)
-        elif self.model_name == "mlp":
-            model = MLPClassifier(**self.model_params)
-        elif self.model_name == "svm":
-            model = SVC(**self.model_params, probability=True)
-        elif self.model_name == "logistic_regression":
-            model = LogisticRegression(**self.model_params)
-        elif self.model_name == "ridge_regression":
-            model = RidgeClassifier(**self.model_params)
-        elif self.model_name == "lasso_regression":
-            model = Lasso(**self.model_params)
-        elif self.model_name == "elastic_net":
-            model = ElasticNet(**self.model_params)
-        else:
-            raise ValueError(f"Unknown model type: {self.model_name}")
-        
-        # Create pipeline with scaling if needed
-        if self.scaler is not None:
-            self.model = Pipeline([
-                ('scaler', self.scaler),
-                ('classifier', model)
-            ])
-        else:
-            self.model = model
-        
-        return self.model
-    
-    def train(self, X_train, y_train):
-        """Train the model on the provided data."""
-        if self.model is None:
-            self.build_model()
-        
-        # Encode target labels
-        y_encoded = self.label_encoder.fit_transform(y_train)
-        
-        logger.info(f"Training {self.model_name} model for plant type-stage classification")
-        logger.info(f"Class distribution: {Counter(y_train)}")
-        self.model.fit(X_train, y_encoded)
-        return self
-    
-    def predict(self, X):
-        """Make predictions using the trained model."""
-        if self.model is None:
-            raise ValueError("Model has not been trained yet.")
-            
-        y_pred_encoded = self.model.predict(X)
-        return self.label_encoder.inverse_transform(y_pred_encoded)
-    
-    def predict_proba(self, X):
-        """Make probability predictions using the trained model."""
-        if self.model is None:
-            raise ValueError("Model has not been trained yet.")
-            
-        return self.model.predict_proba(X)
+        self.model_config = load_model_config()
+        self.metric = load_model_config()['evaluation_classification']['primary_metric']
     
     def evaluate(self, X_test, y_test):
         """Evaluate the model on test data."""
@@ -104,7 +41,7 @@ class PlantTypeStageClassifier:
         if self.metric == 'f1':
             results['f1_macro'] = f1_score(y_encoded, y_pred_encoded, average='macro')
             results['f1_weighted'] = f1_score(y_encoded, y_pred_encoded, average='weighted')
-        if self.metric == 'precision' :
+        if self.metric == 'precision':
             results['precision_macro'] = precision_score(y_encoded, y_pred_encoded, average='macro')
         if self.metric == 'recall':
             results['recall_macro'] = recall_score(y_encoded, y_pred_encoded, average='macro')
@@ -118,7 +55,6 @@ class PlantTypeStageClassifier:
         results['confusion_matrix'] = confusion_matrix(y_encoded, y_pred_encoded)
         
         return results
-    
     def save(self, filepath):
         """Save the model and label encoder to disk."""
         if self.model is None:
@@ -150,6 +86,61 @@ class PlantTypeStageClassifier:
         logger.info(f"Model loaded from {filepath}")
         return self
     
+    
+
+
+class PlantTypeStageClassifier(BaseTypeStageClassifier):
+    """Class for plant type-stage classification models in the agricultural pipeline."""
+    
+    def __init__(self, model_name, model_params=None, scaler=None):
+        super().__init__(model_name, model_params, scaler)
+    
+    def build_model(self):
+        """Build the model based on model_name."""
+        if self.model_name == "random_forest":
+            model = RandomForestClassifier(**self.model_params)
+        elif self.model_name == "gradient_boosting":
+            model = GradientBoostingClassifier(**self.model_params)
+        elif self.model_name == "xgboost":
+            model = XGBClassifier(**self.model_params)
+        elif self.model_name == "ridge_regression":
+            model = RidgeClassifier(**self.model_params)
+        elif self.model_name == "linear_regression":
+            model = LogisticRegression(**self.model_params)
+        else:
+            raise ValueError(f"Unknown model type: {self.model_name}")
+        
+        self.model = model
+        return self.model
+    
+    def train(self, X_train, y_train):
+        """Train the model on the provided data."""
+        if self.model is None:
+            self.build_model()
+        
+        # Encode target labels
+        y_encoded = self.label_encoder.fit_transform(y_train)
+        
+        logger.info(f"Training {self.model_name} model for plant type-stage classification")
+        logger.info(f"Class distribution: {Counter(y_train)}")
+        self.model.fit(X_train, y_encoded)
+        return self
+    
+    def predict(self, X):
+        """Make predictions using the trained model."""
+        if self.model is None:
+            raise ValueError("Model has not been trained yet.")
+            
+        y_pred_encoded = self.model.predict(X)
+        return self.label_encoder.inverse_transform(y_pred_encoded)
+    
+    def predict_proba(self, X):
+        """Make probability predictions using the trained model."""
+        if self.model is None:
+            raise ValueError("Model has not been trained yet.")
+            
+        return self.model.predict_proba(X)
+    
     def hyperparameter_tuning(self, X, y, param_grid=None, cv=5, n_jobs=-1, method='grid'):
         """Perform hyperparameter tuning for the model."""
         # Encode target labels
@@ -162,7 +153,6 @@ class PlantTypeStageClassifier:
             else:
                 logger.warning(f"No default param grid for {self.model_name}. Using empty grid.")
                 param_grid = {}
-    ################### THis might cause an error due to more grid para in yaml file############################
         
         # Create a base model
         base_model = self.build_model()
@@ -192,7 +182,6 @@ class PlantTypeStageClassifier:
                 best_params = {k.replace('classifier__', ''): v 
                              for k, v in search.best_params_.items() 
                              if k.startswith('classifier__')}
-                print('Best parameters (line 191 of plant_type_stage_classification_models):', best_params)
             else:
                 best_params = search.best_params_
                 
@@ -200,30 +189,30 @@ class PlantTypeStageClassifier:
             self.build_model()
             self.model.fit(X, y_encoded)
         
-        return self, search.best_params_
+        return self.model, search.best_params_
 
 
-class EnsemblePlantClassifier(BaseEstimator, ClassifierMixin):
+class EnsemblePlantClassifier(BaseTypeStageClassifier, BaseEstimator, ClassifierMixin):
     """
     An ensemble classifier that combines multiple models for plant type-stage classification
-    using voting or stacking techniques. We define a new class inherited from BaseEstimator
-    and ClassifierMixin to create a custom classifier that can be used with scikit-learn.
+    using voting or stacking techniques.
     """
     
-    def __init__(self, base_models=None, voting='soft', weights=None):
+    def __init__(self):
+        super().__init__()
+        config = load_model_config()['advanced_models']['ensemble_plant']
         random_state = load_model_config()['common']['random_state']
-        RFC_n_edtimators = load_model_config()['models']['random_forest']['params']['n_estimators']
+        RFC_n_estimators = load_model_config()['models']['random_forest']['params']['n_estimators']
         GBC_n_estimators = load_model_config()['models']['gradient_boosting']['params']['n_estimators']
         XGB_n_estimators = load_model_config()['models']['xgboost']['params']['n_estimators']
         
-        self.base_models = base_models or [
-            RandomForestClassifier(n_estimators=RFC_n_edtimators, random_state=random_state),
+        self.base_models = [
+            RandomForestClassifier(n_estimators=RFC_n_estimators, random_state=random_state),
             GradientBoostingClassifier(n_estimators=GBC_n_estimators, random_state=random_state),
             XGBClassifier(n_estimators=XGB_n_estimators, random_state=random_state)
         ]
-        self.voting = voting  # 'hard' or 'soft'
-        self.weights = weights
-        self.label_encoder = LabelEncoder()
+        self.voting = config['params']['voting']
+        self.weights = config['params']['weights']
         self.trained_models = None
         self.classes_ = None
     
@@ -240,7 +229,7 @@ class EnsemblePlantClassifier(BaseEstimator, ClassifierMixin):
             model.fit(X, y_encoded)
             self.trained_models.append(model)
         
-        return self
+        return self.model
     
     def predict(self, X):
         """Make predictions using voting from all base models."""
@@ -275,7 +264,7 @@ class EnsemblePlantClassifier(BaseEstimator, ClassifierMixin):
         
         # Get probability predictions from each model
         all_probas = []
-        for i, model in enumerate(self.trained_models):
+        for model in self.trained_models:
             if hasattr(model, 'predict_proba'):
                 proba = model.predict_proba(X)
                 all_probas.append(proba)
@@ -289,137 +278,3 @@ class EnsemblePlantClassifier(BaseEstimator, ClassifierMixin):
             final_probas = np.mean(np.array(all_probas), axis=0)
         
         return final_probas
-
-
-class AdaptivePlantClassifier(BaseEstimator, ClassifierMixin):
-    """
-    An adaptive classifier that adjusts its behavior based on sensor readings
-    and time-based features for plant type-stage classification.
-    """
-    
-    def __init__(self):
-        """
-        Initialize the adaptive classifier with specialized models for different conditions.
-        """
-        config = load_model_config()['models']['adaptive_classifier']
-        self.models_config = config['models_config']
-        self.default_model_config = config['default_model']
-        
-        self.trained_models = {}
-        self.default_model = self._build_model(self.default_model_config)
-        self.label_encoder = LabelEncoder()
-        self.temp_feature_idx = None  # Will be determined during fit
-        self.classes_ = None
-        
-    def _build_model(self, model_config):
-        """Build a model based on the provided configuration."""
-        model_name = model_config['model']
-        model_params = model_config['params']
-        
-        if model_name == "random_forest":
-            return RandomForestClassifier(**model_params)
-        elif model_name == "gradient_boosting":
-            return GradientBoostingClassifier(**model_params)
-        elif model_name == "xgboost":
-            return XGBClassifier(**model_params)
-        else:
-            raise ValueError(f"Unknown model type: {model_name}")
-    
-    def _get_model_for_conditions(self, X_sample):
-        """Determine which model to use based on environmental conditions."""
-        if self.temp_feature_idx is None:
-            return self.default_model
-            
-        temperature = X_sample[self.temp_feature_idx]
-        
-        for config_name, config in self.models_config.items():
-            low, high = config['range']
-            if low <= temperature < high:
-                return self.trained_models.get(config_name, self.default_model)
-                
-        return self.default_model
-    
-    def fit(self, X, y, temp_feature_name=None, temp_feature_idx=None):
-        """
-        Train specialized models for different environmental conditions.
-        
-        Args:
-            X: Feature matrix
-            y: Target labels
-            temp_feature_name: Name of the temperature feature (if X is DataFrame)
-            temp_feature_idx: Index of the temperature feature (if X is numpy array)
-        """
-        # Encode target labels
-        y_encoded = self.label_encoder.fit_transform(y)
-        self.classes_ = self.label_encoder.classes_
-        
-        # Determine temperature feature index
-        if temp_feature_name is not None and hasattr(X, 'columns'):
-            self.temp_feature_idx = list(X.columns).index(temp_feature_name)
-        elif temp_feature_idx is not None:
-            self.temp_feature_idx = temp_feature_idx
-        else:
-            logger.warning("Temperature feature not specified. Using default model for all predictions.")
-            self.default_model.fit(X, y_encoded)
-            return self
-        
-        # Train specialized models for each condition range
-        for config_name, config in self.models_config.items():
-            low, high = config['range']
-            temp_values = X[:, self.temp_feature_idx] if isinstance(X, np.ndarray) else X.iloc[:, self.temp_feature_idx]
-            
-            # Filter data for this temperature range
-            mask = (temp_values >= low) & (temp_values < high)
-            if np.sum(mask) > 10:  # Only train if we have enough samples
-                X_subset = X[mask] if isinstance(X, np.ndarray) else X.iloc[mask]
-                y_subset = y_encoded[mask]
-                
-                logger.info(f"Training model for {config_name} with {np.sum(mask)} samples")
-                model = self._build_model(config)
-                model.fit(X_subset, y_subset)
-                self.trained_models[config_name] = model
-            else:
-                logger.warning(f"Not enough samples for {config_name} ({np.sum(mask)} samples)")
-        
-        # Train default model on all data
-        self.default_model.fit(X, y_encoded)
-        
-        return self
-    
-    def predict(self, X):
-        """Make predictions using the appropriate model for each sample's conditions."""
-        predictions = np.zeros(X.shape[0], dtype=int)
-        
-        # For each sample, select the appropriate model and predict
-        for i in range(X.shape[0]):
-            X_sample = X[i] if isinstance(X, np.ndarray) else X.iloc[i]
-            model = self._get_model_for_conditions(X_sample)
-            
-            # Reshape for single sample prediction
-            X_sample_reshaped = X_sample.reshape(1, -1) if isinstance(X_sample, np.ndarray) else pd.DataFrame([X_sample])
-            predictions[i] = model.predict(X_sample_reshaped)[0]
-            
-        # Convert back to original labels
-        return self.label_encoder.inverse_transform(predictions)
-    
-    def predict_proba(self, X):
-        """Make probability predictions using the appropriate model for each sample."""
-        n_classes = len(self.classes_)
-        probas = np.zeros((X.shape[0], n_classes))
-        
-        # For each sample, select the appropriate model and predict probabilities
-        for i in range(X.shape[0]):
-            X_sample = X[i] if isinstance(X, np.ndarray) else X.iloc[i]
-            model = self._get_model_for_conditions(X_sample)
-            
-            # Reshape for single sample prediction
-            X_sample_reshaped = X_sample.reshape(1, -1) if isinstance(X_sample, np.ndarray) else pd.DataFrame([X_sample])
-            
-            if hasattr(model, 'predict_proba'):
-                probas[i] = model.predict_proba(X_sample_reshaped)[0]
-            else:
-                # For models without predict_proba, use one-hot encoding based on prediction
-                pred = model.predict(X_sample_reshaped)[0]
-                probas[i, pred] = 1.0
-                
-        return probas

@@ -1,17 +1,11 @@
 """
 Module for preprocessing data before model training.
 """
-
-import yaml
 from pathlib import Path
 import os
-import pandas as pd 
-import numpy as np
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, LabelEncoder
-from sklearn.model_selection import train_test_split
-from category_encoders import OneHotEncoder, TargetEncoder
-from datetime import datetime
 from loguru import logger
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, LabelEncoder
+from category_encoders import OneHotEncoder, TargetEncoder
 from config_loader import load_config, load_preprocessing_config
 
 class DataPreprocessor:
@@ -41,7 +35,6 @@ class DataPreprocessor:
         Returns:
             pandas.DataFrame: Preprocessed dataframe
         """
-        logger.info("Starting data preprocessing")
         
         # Create a copy to avoid modifying the original
         df_processed = df.copy()
@@ -56,10 +49,11 @@ class DataPreprocessor:
         df_processed = self._scale_numerical_columns(df_processed)
         
         # Save processed data
-        print(self.config['paths']['processed_data'])
-        dir = os.path.join(Path(__file__).resolve().parents[1], self.config['paths']['processed_data'])
+        dir = os.path.join(Path(__file__).resolve().parents[1], self.config['paths']['processed_data']+'processed'+self.problem_type+'_data.csv')
         df_processed.to_csv(dir, index=False)
-        logger.info(f"Preprocessed data saved to {dir}")
+        # Log progress
+        logger.info(f"Data for {self.problem_type} problem saved to {dir}")
+
         
         return df_processed
     
@@ -70,7 +64,6 @@ class DataPreprocessor:
             # Only drop columns that exist in the dataframe
             columns_to_drop = [col for col in drop_columns if col in df.columns]
             if columns_to_drop:
-                logger.info(f"Dropping columns: {columns_to_drop}")
                 df = df.drop(columns=columns_to_drop)
         return df
 
@@ -83,20 +76,13 @@ class DataPreprocessor:
             categorical_cols_not2encode = self.config['data']['target_cat']
         categorical_cols = self.preprocessing_config['columns']['categorical']
         
-        logger.info(f"Categorical columns in config: {categorical_cols}")
-        logger.info(f"Categorical columns not to encode: {categorical_cols_not2encode}")
-        
         categorical_cols_2encode = [col for col in categorical_cols if col in df.columns and col not in categorical_cols_not2encode]
-        
-        logger.info(f"Categorical columns to encode: {categorical_cols_2encode}")
-        
+
         if not categorical_cols_2encode:
             return df
             
         encoding_method = self.preprocessing_config['preprocessing']['categorical_encoding']['method']
         handle_unknown = self.preprocessing_config['preprocessing']['categorical_encoding']['handle_unknown']
-        
-        logger.info(f"Encoding categorical variables using {encoding_method} encoding")
         
         if encoding_method == 'one-hot':
             encoder = OneHotEncoder(cols=categorical_cols_2encode, handle_unknown=handle_unknown)
@@ -135,8 +121,6 @@ class DataPreprocessor:
         
         if scaling_method == 'none':
             return df
-            
-        logger.info(f"Scaling numerical variables using {scaling_method} scaling")
         
         # Create a copy of the numerical columns for scaling
         df_scaled = df.copy()
@@ -155,73 +139,3 @@ class DataPreprocessor:
         self.scalers['numerical'] = scaler
         
         return df_scaled
-    
-    def split_data(self, df):
-        """
-        Split data into training, validation, and test sets.
-        
-        Args:
-            df (pandas.DataFrame): Input dataframe
-            
-        Returns:
-            tuple: (X_train, X_val, X_test, y_train, y_val, y_test)
-        """
-        logger.info("Splitting data into train, validation, and test sets")
-        
-        # Extract target variable
-        
-        if self.problem_type == 'regression':
-            target_column = self.config['columns']['target_num']
-        elif self.problem_type == 'classification':
-            target_column = self.config['columns']['target_cat']
-        else:
-            raise ValueError(f"Unsupported problem type '{self.problem_type}'")
-        
-        if target_column not in df.columns:
-            raise ValueError(f"Target column '{target_column}' not found in dataframe")
-            
-        X = df.drop(columns=[target_column])
-        y = df[target_column]
-        
-        # Split into train+val and test
-        test_size = self.config['data']['test_size']
-        random_state = self.config['data']['random_state']
-        
-        X_train_val, X_test, y_train_val, y_test = train_test_split(
-            X, y, test_size=test_size, random_state=random_state
-        )
-        
-        # Split train+val into train and validation
-        val_size = self.config['data']['validation_size']
-        
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_train_val, y_train_val, test_size=val_size, random_state=random_state
-        )
-        
-        logger.info(f"Data split completed. Train: {X_train.shape}, Validation: {X_val.shape}, Test: {X_test.shape}")
-        
-        return X_train, X_val, X_test, y_train, y_val, y_test
-
-# # To test module
-# if __name__ == "__main__":
-#     pd.set_option('display.max_columns', None)
-#     from data_loader import DataLoader
-#     from data_cleaner import DataCleaner
-#     from feature_engineering import FeatureEngineer
-#     from feature_selection import FeatureSelector
-#     data_loader = DataLoader()
-#     data = data_loader.load_data()
-#     data_cleaner = DataCleaner()
-#     cleaned_data = data_cleaner.clean_data(data)
-#     print('Clean data columns are ', cleaned_data.columns)
-#     feature_selector = FeatureSelector('regression')
-#     selected_data = feature_selector.select_features(cleaned_data)
-#     print('Selected data columns are ', selected_data.columns)
-#     feature_engineer = FeatureEngineer()
-#     engineered_data = feature_engineer.engineer_features(selected_data)
-#     print('Engineered data columns are ', engineered_data.columns)
-#     preprocessor = DataPreprocessor('regression')
-#     preprocessed_data = preprocessor.preprocess(engineered_data)
-#     print('Preprocessed data columns are ', preprocessed_data.columns)
-#     print(preprocessed_data.head())
-#     print('Shape of final preprocessed data is ', preprocessed_data.shape)

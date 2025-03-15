@@ -21,28 +21,7 @@ models:
       enabled: false
       param_grid:
         alpha: [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]
-  
-  lasso_regression:
-    enabled: true
-    params:
-      alpha: 0.1
-    hyperparameter_tuning:
-      enabled: false
-      param_grid:
-        alpha: [0.001, 0.01, 0.1, 1.0, 10.0]
-        max_iter: [1000, 2000]
-  
-  elastic_net:
-    enabled: true
-    params:
-      alpha: 0.1
-      l1_ratio: 0.5
-    hyperparameter_tuning:
-      enabled: false
-      param_grid:
-        alpha: [0.001, 0.01, 0.1, 1.0]
-        l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
-  
+
   random_forest:
     enabled: true
     params:
@@ -87,47 +66,36 @@ models:
         max_depth: [3, 5, 7]
         subsample: [0.7, 0.8, 0.9]
         colsample_bytree: [0.7, 0.8, 0.9]
-  
-  lightgbm:
-    enabled: true
+
+advanced_models:
+  deep:
+    enabled: false
     params:
-      n_estimators: 100
-      learning_rate: 0.1
-      num_leaves: 31
-      feature_fraction: 0.8
+      hidden_layers: [100, 50]
+      activation: relu
+      solver: adam
+      learning_rate: adaptive
+      max_iter: 1000
+      alpha: 0.0001
+    hyperparameter_tuning:
+      enabled: true
+      param_grid:
+        hidden_layer_sizes: [[50], [100], [50, 50], [100, 50]]
+        activation: [relu, tanh]
+        alpha: [0.0001, 0.001, 0.01]
+        learning_rate: [constant, adaptive]
+        max_iter: [500, 1000, 2000]
+
+  ensemble_plant:
+    enabled: false
+    params:
+      voting: soft
+      weights: [1, 1, 1]  # Default weights for base models
     hyperparameter_tuning:
       enabled: false
-      param_grid:
-        n_estimators: [50, 100, 200]
-        learning_rate: [0.01, 0.05, 0.1]
-        num_leaves: [15, 31, 63]
-        feature_fraction: [0.7, 0.8, 0.9]
-
-  adaptive_classifier:
-    enabled: true
-    models_config:
-      low_temp:
-        range: [-inf, 15.0]
-        model: random_forest
-        params:
-          n_estimators: 150
-      medium_temp:
-        range: [15.0, 25.0]
-        model: gradient_boosting
-        params:
-          n_estimators: 100
-      high_temp:
-        range: [25.0, inf]
-        model: xgboost
-        params:
-          n_estimators: 100
-    default_model:
-      model: random_forest
-      params:
-        n_estimators: 100
 
 # Model evaluation metrics for regression problem
-evaluation_regression:
+evaluation_regression: # Used to evaluate models during model training phase
   metrics:
     - r2
     - mae

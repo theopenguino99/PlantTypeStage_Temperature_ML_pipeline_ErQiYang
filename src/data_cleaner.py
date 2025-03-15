@@ -1,12 +1,6 @@
 """
 Module for cleaning and preprocessing data.
 """
-import os
-from pathlib import Path
-from data_loader import DataLoader
-import pandas as pd
-import numpy as np
-from loguru import logger
 from config_loader import load_config, load_preprocessing_config
 
 
@@ -33,7 +27,6 @@ class DataCleaner:
         Returns:
             pandas.DataFrame: Cleaned dataframe
         """
-        logger.info("Starting data cleaning process")
         
         # Create a copy to avoid modifying the original
         df_cleaned = df.copy()
@@ -46,9 +39,9 @@ class DataCleaner:
         df_cleaned = self._handle_missing_values(df_cleaned)
         df_cleaned = self._handle_outliers(df_cleaned)
         
-        logger.info(f"Data cleaning completed. Final shape: {df_cleaned.shape}")
         
         return df_cleaned
+
     def clean_nutrient_sensors(self, df):
         """
         Clean and extract numerical values from nutrient sensor columns.
@@ -62,13 +55,11 @@ class DataCleaner:
         if not self.preprocessing_config['cleaning']['clean_Nutrient_Sensor']['enabled']:
             return df
         
-        logger.info("Cleaning nutrient sensor columns")
         
         nutrient_columns = self.preprocessing_config['cleaning']['clean_Nutrient_Sensor']['columns']
         
         for col in nutrient_columns:
             if col in df.columns:
-                logger.info(f"Extracting numerical values from {col}")
                 df[col] = df[col].str.extract('(\d+)', expand=False).astype(float)
         
         return df
@@ -78,13 +69,11 @@ class DataCleaner:
         if not self.preprocessing_config['cleaning']['map_labels_to_lowercase']['enabled']:
             return df
         
-        logger.info("Mapping labels to lowercase")
         
         columns_to_map = self.preprocessing_config['cleaning']['map_labels_to_lowercase']['columns']
         
         for col in columns_to_map:
             if col in df.columns:
-                logger.info(f"Mapping labels in {col} to lowercase")
                 df[col] = df[col].str.lower()
         
         return df
@@ -94,7 +83,6 @@ class DataCleaner:
         if not self.preprocessing_config['cleaning']['handle_negative_values']['enabled']:
             return df
         
-        logger.info("Handling negative values in specified columns")
         
         columns_to_handle = self.preprocessing_config['cleaning']['handle_negative_values']['columns']
         strategy = self.preprocessing_config['cleaning']['handle_negative_values']['strategy']
@@ -103,13 +91,10 @@ class DataCleaner:
             if col in df.columns:
                 negative_count = (df[col] < 0).sum()
                 if negative_count > 0:
-                    logger.info(f"Found {negative_count} negative values in {col}")
                     if strategy == 'remove':
                         df = df[df[col] >= 0]
-                        logger.info(f"Removed rows with negative values in {col}")
                     elif strategy == 'absolute':
                         df[col] = df[col].abs()
-                        logger.info(f"Converted negative values to absolute in {col}")
         
         return df
     
@@ -118,7 +103,6 @@ class DataCleaner:
         if not self.preprocessing_config['cleaning']['handle_duplicates']['enabled']:
             return df
         
-        logger.info("Handling duplicate rows")
         
         # Identify columns to ignore when detecting duplicates
         ignore_cols = self.preprocessing_config['cleaning']['handle_duplicates']['ignore_columns']
@@ -126,13 +110,11 @@ class DataCleaner:
         
         # Count duplicates
         n_duplicates = df.duplicated(subset=cols_to_check).sum()
-        logger.info(f"Found {n_duplicates} duplicate rows")
         
         if n_duplicates > 0:
             # Keep only the first occurrence of duplicates
             keep_option = self.preprocessing_config['cleaning']['handle_duplicates']['keep']
             df = df.drop_duplicates(subset=cols_to_check, keep=keep_option)
-            logger.info(f"Removed duplicates. Keeping '{keep_option}' occurrences.")
         
         return df
     
@@ -140,7 +122,7 @@ class DataCleaner:
         """Handle missing values in the dataframe."""
         if not self.preprocessing_config['cleaning']['handle_missing_values']['enabled']:
             return df
-        logger.info("Handling missing values")
+        
         
         # Get missing value configurations
         num_strategy = self.preprocessing_config['cleaning']['handle_missing_values']['numerical']['strategy']
@@ -153,8 +135,6 @@ class DataCleaner:
         
         # Report missing values
         missing_info = df.isnull().sum()
-        if missing_info.sum() > 0:
-            logger.info(f"Missing values before imputation:\n{missing_info[missing_info > 0]}")
         
         # Handle missing numerical values
         for col in num_cols:
@@ -180,8 +160,6 @@ class DataCleaner:
         
         # Report missing values after imputation
         missing_info_after = df.isnull().sum()
-        if missing_info_after.sum() > 0:
-            logger.warning(f"Missing values after imputation:\n{missing_info_after[missing_info_after > 0]}")
         
         return df
     
@@ -190,7 +168,7 @@ class DataCleaner:
         """Handle outliers in numerical features based on the specified strategy."""
         if not self.preprocessing_config['cleaning']['handle_outliers']['enabled']:
             return df
-        logger.info("Handling outliers")
+        
         
         if self.preprocessing_config['cleaning']['handle_outliers']==None:
             return df
@@ -207,7 +185,6 @@ class DataCleaner:
                     z_scores = zscore(df[col].dropna())
                     outliers = abs(z_scores) > zscore_threshold
                     df.loc[outliers, col] = df[col].median()
-                    logger.info(f"Replaced {outliers.sum()} outliers in {col} using Z-score method.")
                 
                 elif method == 'iqr':
                     Q1 = df[col].quantile(0.25)
@@ -217,13 +194,5 @@ class DataCleaner:
                     upper_bound = Q3 + iqr_multiplier * IQR
                     outliers = (df[col] < lower_bound) | (df[col] > upper_bound)
                     df.loc[outliers, col] = df[col].median()
-                    logger.info(f"Replaced {outliers.sum()} outliers in {col} using IQR method.")
         
         return df
-    
-# # To test module
-# df = DataLoader().load_data()
-# cleaner = DataCleaner()
-# cleaned_data = cleaner.clean_data(df)
-# print(cleaned_data.head())
-# print(cleaned_data.info())
