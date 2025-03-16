@@ -11,10 +11,10 @@ models:
     enabled: true
     params: {}
     hyperparameter_tuning:
-      enabled: true
+      enabled: false
       
   ridge_regression:
-    enabled: false
+    enabled: true
     params:
       alpha: 1.0
     hyperparameter_tuning:
@@ -23,7 +23,7 @@ models:
         alpha: [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]
 
   random_forest:
-    enabled: false
+    enabled: true
     params:
       n_estimators: 100
       max_depth: 10
@@ -38,7 +38,7 @@ models:
         min_samples_leaf: [1, 2, 4]
   
   gradient_boosting:
-    enabled: false
+    enabled: true
     params:
       n_estimators: 100
       learning_rate: 0.1
@@ -51,7 +51,7 @@ models:
         max_depth: [3, 5, 7]
   
   xgboost:
-    enabled: false
+    enabled: true
     params:
       n_estimators: 100
       learning_rate: 0.1
@@ -69,7 +69,7 @@ models:
 
 advanced_models:
   deep_temperature:
-    enabled: false
+    enabled: true
     params:
       hidden_layers: [100, 50]
       activation: relu
@@ -78,7 +78,7 @@ advanced_models:
       max_iter: 1000
       alpha: 0.0001
     hyperparameter_tuning:
-      enabled: true
+      enabled: false
       param_grid:
         hidden_layer_sizes: [[50], [100], [50, 50], [100, 50]]
         activation: [relu, tanh]
@@ -87,7 +87,7 @@ advanced_models:
         max_iter: [500, 1000, 2000]
 
   ensemble_plant:
-    enabled: false
+    enabled: true
     params:
       voting: soft
       weights: [1, 1, 1]  # Default weights for base models
