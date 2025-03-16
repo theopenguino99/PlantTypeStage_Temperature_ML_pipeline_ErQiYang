@@ -1,7 +1,7 @@
 # Student Performance Prediction ML Pipeline
 **Name:** ER Qi Yang  
 **NRIC:** S9942227J  
-**Email:** [Your Email Address as in Application Form]  
+**Email:** e0148703@u.nus.edu 
 
 This machine learning pipeline predicts the temperature conditions ("Temperature Sensor (°C)") within the farm's closed environment, ensuring optimal plant growth. Additionally, it contains models to categorise the combined ("Plant Type-Stage") based on sensor data, aiding in
 strategic planning and resource allocation.
