@@ -1,4 +1,0 @@
-linear_regression
-"TemperatureRegressionModel(model_name='linear_regression', model_params={})"
-"{'r2': 1.0, 'mae': 3.0632314462764045e-13, 'mse': 1.3916292830866718e-25, 'rmse': np.float64(3.7304547753413013e-13)}"
-models/REGRESSION_linear_regression.pkl
