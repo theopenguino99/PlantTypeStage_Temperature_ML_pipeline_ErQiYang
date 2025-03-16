@@ -46,6 +46,44 @@ The dataset includes the following features:
 - **pH Sensor**: pH levels of the soil or water.
 - **Water Level Sensor (mm)**: Water levels measured in millimeters.
 
+## 🔭 Exploratory Data Analysis
+
+From our EDA we found that the input dataset was not clean. The first impressions of the data is that it contains:
+- **ppm Sensor in string format**: Sensor readings are in string format and some strings containt spaces and the letters 'ppm'
+- **Plant Type and Plant Stage contain uppercase and lowercase letters** : Although the format of the words are the same apart from capitalisation so we can simply make all labels lowercase or uppercase
+- **Negative Values**: The Temperature and O2 sensor values contain negative values in them. Upon visualizing a scatter plot we can see that the data is quite symetrical. We can conclude that negative features do not have any intercorrelation.
+![alt text](image-3.png)
+   - Upon further analysis we find that the distribution of these negative values are not different compared to the rest of the dataset. We can choose to take the absolute value of these negative values or simply delete them as they do not make up a significant portion of the dataset.
+   ![alt text](image-1.png)
+   ![alt text](image-2.png)
+   
+- **Heatmap**: Upon plotting the heatmap of the data after cleaning the dataset by amending the beforementioned errors, we get a heatmap that looks like this. We see straight away that Nutrient P and N have high correlation of more than 0.7. We can create new features that combine these 2, for example Nutrient Balance index (refer to Preprocessing Configuration below)
+![alt text](image.png)
+
+- **Duplicates**: We find that there is a significant number of 7489 duplicates out of the original 57489 which we delete from the data set.
+
+- **Null values**: Next we take a look at the null values before doing a preprocessing on the clean data which include techniques such as imputation, scaling, and creating new features.
+
+| Feature                           | Missing Values |
+|-----------------------------------|----------------|
+| System Location Code              | 0              |
+| Previous Cycle Plant Type         | 0              |
+| Plant Type                         | 0              |
+| Plant Stage                        | 0              |
+| Temperature Sensor (°C)           | 8689           |
+| Humidity Sensor (%)              | 38867          |
+| Light Intensity Sensor (lux)      | 4278           |
+| CO2 Sensor (ppm)                  | 0              |
+| EC Sensor (dS/m)                  | 0              |
+| O2 Sensor (ppm)                   | 0              |
+| Nutrient N Sensor (ppm)          | 9974           |
+| Nutrient P Sensor (ppm)          | 5698           |
+| Nutrient K Sensor (ppm)          | 3701           |
+| pH Sensor                          | 0              |
+| Water Level Sensor (mm)          | 8642           |
+
+
+
 ---
 
 ## ⚙️ Configuration
@@ -72,6 +110,26 @@ The pipeline is highly configurable through YAML files located in the `config/` 
 - **Experiment Tracking**: Save metrics, models, and visualizations for analysis.
 
 ---
+## 🧹 Data Cleaning and Processing procedure
+
+### Below are the clases defined to handle cleaning, selection of features, engineering of feautres and processing of features respectively.
+
+| **Class**        | **Actions**                                                                 |
+|-------------------|-----------------------------------------------------------------------------|
+| **DataCleaner**    | - Nutrient Sensor values are extracted from strings and converted to float. |
+|                   | - Plant Type and Plant Stage labels are lower-cased.                         |
+|                   | - Convert negative values to positive in sensor readings (O2 and Temperature).|
+|                   | - Delete duplicates.                                                         |
+|                   | - Impute missing values according to mode.                                  |
+|                   | - Handle outliers using IQR.                                                |
+| **FeatureSelector**| - Create new target feature called Plant Type-Stage for the classification problem.|
+|                   | - Select features via variances, correlation, or importance.                |
+| **FeatureEngineer**| - Create additional features: Nutrient Balance Index, Environmental Stress Index, and Water Quality Score to enhance dataset.|
+| **FeatureProcessor**| - Drop columns manually by user.                                           |
+|                   | - Encode categorical data by one-hot encoding (or label encoder according to configuration).|
+|                   | - Scale numerical data.                                                     |
+
+___
 
 ## ⚙️ Installation
 
@@ -100,12 +158,6 @@ To run the entire ML pipeline with the default configuration:
 ```bash
 ./run.sh
 ```
-
-To run it with a custom configuration:
-```bash
-./run.sh --config config/custom_config.yaml
-```
-
 ---
 
 ## 🛠️ Customization
@@ -133,7 +185,7 @@ student_performance_ml_pipeline/
 │   ├── preprocessing_config.yaml           # Preprocessing configuration
 │   └── model_config.yaml                   # Model-specific configurations
 ├── data/                                   # Data directory
-│   ├── agri.db                             # Raw data
+│   ├── agri.db                             # Raw data (Removed from github according to assessment guidelines)
 │   └── processed/                          # Processed data
 ├── models/                                 # Saved models (in .pkl format)
 ├── results/                                # Results and visualizations (in both .pkl and .csv readable format)
