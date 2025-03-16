@@ -11,10 +11,10 @@ models:
     enabled: true
     params: {}
     hyperparameter_tuning:
-      enabled: false
+      enabled: true
       
   ridge_regression:
-    enabled: true
+    enabled: false
     params:
       alpha: 1.0
     hyperparameter_tuning:
@@ -23,7 +23,7 @@ models:
         alpha: [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]
 
   random_forest:
-    enabled: true
+    enabled: false
     params:
       n_estimators: 100
       max_depth: 10
@@ -38,7 +38,7 @@ models:
         min_samples_leaf: [1, 2, 4]
   
   gradient_boosting:
-    enabled: true
+    enabled: false
     params:
       n_estimators: 100
       learning_rate: 0.1
@@ -51,7 +51,7 @@ models:
         max_depth: [3, 5, 7]
   
   xgboost:
-    enabled: true
+    enabled: false
     params:
       n_estimators: 100
       learning_rate: 0.1
@@ -68,7 +68,7 @@ models:
         colsample_bytree: [0.7, 0.8, 0.9]
 
 advanced_models:
-  deep:
+  deep_temperature:
     enabled: false
     params:
       hidden_layers: [100, 50]

@@ -65,7 +65,7 @@ def main():
         
         logger.info(f"Results saved to {results_dir} in both CSV and pickle formats")
         
-        logger.opt(colors = True).info("<green>ML pipeline completed successfully</green>")
+        logger.opt(colors = True).info("<green>ML Training pipeline completed successfully</green>")
         return 0
         
     except Exception as e:

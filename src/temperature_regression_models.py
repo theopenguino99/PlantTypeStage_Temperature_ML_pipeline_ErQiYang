@@ -112,7 +112,7 @@ class DeepTemperatureRegressor(BaseTemperatureRegressor):
         self.learning_rate = deep_model_config['params']['learning_rate']
         self.max_iter = deep_model_config['params']['max_iter']
         self.alpha = deep_model_config['params']['alpha']
-        self.random_state = self.config['common']['random_state']
+        self.random_state = self.model_config['common']['random_state']
         self.scaler = StandardScaler()
 
     def fit(self, X, y):

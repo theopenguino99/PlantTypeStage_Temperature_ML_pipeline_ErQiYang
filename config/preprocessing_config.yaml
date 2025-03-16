@@ -26,8 +26,9 @@ columns:
     - sleep_time
     - wake_time
   
-  drop_columns:
-    none # Columns to drop from the dataset manually e.g. none
+  drop_columns: # Columns to drop from the dataset manually e.g. none
+    - System Location Code
+ 
 
 # Data cleaning settings
 cleaning:

@@ -64,6 +64,7 @@ class DataLoader:
         Returns:
             pandas.DataFrame: Loaded data
         """
+        print(db_path)
         conn = sqlite3.connect(db_path)
         # Get the first table name from the SQLite database
         cursor = conn.cursor()

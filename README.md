@@ -1,4 +1,7 @@
 # Student Performance Prediction ML Pipeline
+**Name:** ER Qi Yang  
+**NRIC:** S9942227J  
+**Email:** [Your Email Address as in Application Form]  
 
 This machine learning pipeline predicts the temperature conditions ("Temperature Sensor (°C)") within the farm's closed environment, ensuring optimal plant growth. Additionally, it contains models to categorise the combined ("Plant Type-Stage") based on sensor data, aiding in
 strategic planning and resource allocation.
@@ -43,15 +46,11 @@ The dataset includes the following features:
 - **pH Sensor**: pH levels of the soil or water.
 - **Water Level Sensor (mm)**: Water levels measured in millimeters.
 
-### Datetime Features
-- **sleep_time**: Time the system enters a low-power state.
-- **wake_time**: Time the system resumes operation.
-
 ---
 
 ## ⚙️ Configuration
 
-The pipeline is highly configurable through YAML files located in the `config/` directory:
+The pipeline is highly configurable through YAML files located in the `config/` directory. The user can choose to enable or not the different parameters :
 
 ### Preprocessing Configuration (`preprocessing_config.yaml`)
 - **Missing Value Handling**: Strategies include mean, median, or mode imputation.
@@ -64,9 +63,8 @@ The pipeline is highly configurable through YAML files located in the `config/` 
   - **Water Quality Score**: Combines pH, EC, and water level measurements.
 
 ### Model Configuration (`model_config.yaml`)
-- **Algorithms**: Includes Random Forest, XGBoost, LightGBM, and ElasticNet.
+- **Algorithms**: Includes Random Forest, XGBoost, LightGBM, and ElasticNet. A Multi Layer Perceptron and Ensemble model is also used for regression and classification respectively.
 - **Hyperparameters**: Configurable for grid search or random search.
-- **Adaptive Classifier**: Dynamically selects models based on temperature ranges.
 
 ### General Configuration (`config.yaml`)
 - **Data Paths**: Paths for raw, processed, and feature-engineered data.
@@ -140,37 +138,41 @@ student_performance_ml_pipeline/
 ├── models/                                 # Saved models (in .pkl format)
 ├── results/                                # Results and visualizations (in both .pkl and .csv readable format)
 ├── src/                                    # Source code
-│   ├── config_loader.py                    # Module for loading configurations from .yaml files
-│   ├── data_loader.py                      # Module for loading data
-│   ├── data_cleaner.py                     # Module for cleaning data
-│   ├── data_preprocessor.py                # Module for preprocessing data
-│   ├── feature_engineering.py              # Module for feature engineering
-│   ├── feature_selection.py                # Module for feature selection (automatic)
-│   ├── model_trainer.py                    # Module for training chosen models
-│   ├── model_evaluator.py                  # Module for evaluating performance of models
-│   ├── temperature_regression_models.py    # Module for regression models
-│   ├── plant_type_stage_classification.py  # Module for classification models
-│   └── main.py                             # Main module to execute
-└── pipeline.log                            # Log file
+    ├── config_loader.py                    # Module for loading configurations from .yaml files
+    ├── data_loader.py                      # Module for loading data
+    ├── data_cleaner.py                     # Module for cleaning data
+    ├── data_preprocessor.py                # Module for preprocessing data
+    ├── feature_engineering.py              # Module for feature engineering
+    ├── feature_selection.py                # Module for feature selection (automatic)
+    ├── model_trainer.py                    # Module for training chosen models
+    ├── model_evaluator.py                  # Module for evaluating performance of models
+    ├── temperature_regression_models.py    # Module for regression models
+    ├── plant_type_stage_classification.py  # Module for classification models
+    └── main.py                             # Main module to execute
 ```
-
----
-
-## ✅ Testing
-
-Run the tests to ensure all components are working correctly:
-```bash
-python -m pytest tests/
-```
-
 ---
 
 ## 📈 Results
 
 The pipeline outputs evaluation metrics and predictions in the `results/` directory. Key metrics include:
+### For Regression:
 - **RMSE**: Root Mean Squared Error
+   - RMSE is used to measure the magnitude of error between predicted and actual values. It is especially useful when we care more about larger errors. Since it squares the errors, it gives more weight to large errors, making it particularly sensitive to outliers.
+- **MSE**: Mean Squared Error
+   - MSE is similar to RMSE with the exception of being the squared version, thus large errors tend to be penalised more.
 - **MAE**: Mean Absolute Error
+   - MAE is a straightforward and interpretable metric, representing the average error in absolute terms. It gives an equal weight to all errors, regardless of their size, which makes it less sensitive to outliers compared to RMSE. This can be useful when we want to understand the overall accuracy of the model without overly penalizing large errors.
 - **R²**: Coefficient of Determination
+   - R² tells us how much of the variance in the dependent variable is explained by the model, ranging from 0 to 1, with higher values indicating a better fit. A value of 1 means the model perfectly explains the variance in the data, while 0 means the model doesn't explain any variance. R² is useful to understand how well the model is performing relative to a simple baseline (e.g., predicting the mean value for all instances).
+### For Classification
+- **Accuracy**:
+   - Accuracy gives a quick, general idea of how well the model is performing. It is often used when the classes are balanced. However, accuracy might be misleading when dealing with imbalanced datasets, where one class dominates the other.
+- **Precision**:
+   - Precision helps to understand how many of the predicted positive instances were actually true positives. It is useful when the cost of false positives is high (e.g., predicting a plant is in the wrong stage, which may lead to wrong actions).
+- **Recall**:
+   - Recall tells us how many of the actual positive instances the model was able to identify. It is especially important when false negatives are costly (e.g., missing a plant's growth stage could result in poor decision-making or resource allocation).
+- **F1**:
+   - The F1-Score is particularly useful when you have an imbalanced dataset or when the cost of false positives and false negatives is not the same. It provides a balance between precision and recall, helping to evaluate the model when both false positives and false negatives need to be minimized.
 
 Visualizations are also generated to help interpret the results.
 
@@ -195,6 +197,3 @@ Visualizations are also generated to help interpret the results.
 
 ---
 
-## 📜 License
-
-This project is licensed under the MIT License - see the `LICENSE` file for details.

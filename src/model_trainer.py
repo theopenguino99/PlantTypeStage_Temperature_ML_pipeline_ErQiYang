@@ -1,11 +1,8 @@
-import numpy as np
-import pandas as pd
 import os
 import joblib
-from sklearn.model_selection import train_test_split
-from datetime import datetime
 from loguru import logger
 from config_loader import load_config, load_preprocessing_config, load_model_config
+from sklearn.model_selection import train_test_split
 from plant_type_stage_classification_models import (
     PlantTypeStageClassifier, EnsemblePlantClassifier, #AdaptivePlantClassifier
 )
@@ -132,7 +129,7 @@ class ModelTrainer:
 
             # Save model
             model_path = os.path.join(self.models_dir, f"REGRESSION_{model_name}.pkl")
-            model.save(model_path)
+            joblib.dump(model,model_path)
             
             # Record results
             results[model_name] = {
@@ -148,7 +145,7 @@ class ModelTrainer:
                 best_model = model_name
         
         # Train NN model if enabled
-        if self.model_config['advanced_models']['deep']['enabled']:
+        if self.model_config['advanced_models']['deep_temperature']['enabled']:
             logger.opt(colors=True).info("<red>Training Deep Temperature Regressor</red>")
             deep_model = DeepTemperatureRegressor()
             deep_model.fit(X_train, y_train)
@@ -230,7 +227,7 @@ class ModelTrainer:
 
             # Save model
             model_path = os.path.join(self.models_dir, f"CLASSIFICATION_{model_name}.pkl")
-            model.save(model_path)
+            joblib.dump(model,model_path)
             
             # Record results
             results[model_name] = {
