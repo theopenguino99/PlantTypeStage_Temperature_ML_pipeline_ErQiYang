@@ -1,7 +1,6 @@
-# 🌱 Student Performance Prediction ML Pipeline
+# 🌱 Plant Type-Stage/ Temperature Prediction ML Pipeline
 
 **Name:** ER Qi Yang  
-**NRIC:** S9942227J  
 **Email:** e0148703@u.nus.edu
 
 ## 🎯 Project Focus
